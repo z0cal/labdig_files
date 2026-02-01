@@ -54,7 +54,7 @@ module circuito_exp4_tb_modelo;
 
     // geracao dos sinais de entrada (estimulos)
     initial begin
-      $display("Inicio da simulacao");
+        $display("Inicio da simulacao - cenario 2");
 
       // condicoes iniciais
       caso       = 0;
@@ -63,10 +63,6 @@ module circuito_exp4_tb_modelo;
       iniciar_in = 0;
       chaves_in  = 4'b0000;
       #clockPeriod;
-
-      /*
-       * Cenario de Teste exemplo - acerta 4 jogadas e erra a 5a jogada
-       */
 
       // Teste 1. resetar circuito
       caso = 1;
@@ -133,5 +129,6 @@ module circuito_exp4_tb_modelo;
     end
 
   endmodule
+
 
 
