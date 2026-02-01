@@ -1,21 +1,3 @@
-/* --------------------------------------------------------------------
- * Arquivo   : circuito_exp4_tb-MODELO.v
- * Projeto   : Experiencia 4 - Desenvolvimento de Projeto de 
- *             Circuitos Digitais em FPGA
- * --------------------------------------------------------------------
- * Descricao : testbench Verilog MODELO para circuito da Experiencia 5 
- *
- *             1) Plano de teste com 4 jogadas certas  
- *                e erro na quinta jogada
- *
- * --------------------------------------------------------------------
- * Revisoes  :
- *     Data        Versao  Autor             Descricao
- *     27/01/2024  1.0     Edson Midorikawa  versao inicial
- *     16/01/2024  1.1     Edson Midorikawa  revisao
- * --------------------------------------------------------------------
- */
-
 `timescale 1ns/1ns
 
 module circuito_exp4_tb_modelo;
@@ -93,19 +75,21 @@ module circuito_exp4_tb_modelo;
       reset_in = 1;
       #(clockPeriod);
       reset_in = 0;
+
+      caso = 2;
       // espera
       #(10*clockPeriod);
 
-      // Teste 2. iniciar=1 por 5 periodos de clock
-      caso = 2;
+      // Teste 3. iniciar=1 por 5 periodos de clock
+      caso = 3;
       iniciar_in = 1;
       #(5*clockPeriod);
       iniciar_in = 0;
       // espera
       #(10*clockPeriod);
 
-      // Teste 3. jogada #1 (ajustar chaves para 0001 por 10 periodos de clock
-      caso = 3;
+      // Teste 4. jogada #1 (ajustar chaves para 0001 por 10 periodos de clock
+      caso = 4;
       @(negedge clock_in);
       chaves_in = 4'b0001;
       #(10*clockPeriod);
@@ -113,8 +97,8 @@ module circuito_exp4_tb_modelo;
       // espera entre jogadas
       #(10*clockPeriod);
 
-      // Teste 4. jogada #2 (ajustar chaves para 0010 por 10 periodos de clock
-      caso = 4;
+      // Teste 5. jogada #2 (ajustar chaves para 0010 por 10 periodos de clock
+      caso = 5;
       @(negedge clock_in);
       chaves_in = 4'b0010;
       #(10*clockPeriod);
@@ -122,8 +106,8 @@ module circuito_exp4_tb_modelo;
       // espera entre jogadas
       #(10*clockPeriod);
 
-      // Teste 5. jogada #3 (ajustar chaves para 0100 por 10 periodos de clock
-      caso = 5;
+      // Teste 6. jogada #3 (ajustar chaves para 0100 por 10 periodos de clock
+      caso = 6;
       @(negedge clock_in);
       chaves_in = 4'b0100;
       #(10*clockPeriod);
@@ -131,19 +115,10 @@ module circuito_exp4_tb_modelo;
       // espera entre jogadas
       #(10*clockPeriod);
 
-      // Teste 6. jogada #4 (ajustar chaves para 1000 por 10 periodos de clock
-      caso = 6;
-      @(negedge clock_in);
-      chaves_in = 4'b1000;
-      #(10*clockPeriod);
-      chaves_in = 4'b0000;
-      // espera entre jogadas
-      #(10*clockPeriod);
-
-      // Teste 7. jogada #5 errada (ajustar chaves para 0001 por 5 periodos de clock
+        // Teste 7. jogada #4 errada (ajustar chaves para 0001 por 5 periodos de clock
       caso = 7;
       @(negedge clock_in);
-      chaves_in = 4'b0001; // jogada certa = 4'b0100
+      chaves_in = 4'b0001; // jogada certa = 4'b1000
       #(5*clockPeriod);
       chaves_in = 4'b0000;
       // espera entre jogadas
@@ -158,3 +133,4 @@ module circuito_exp4_tb_modelo;
     end
 
   endmodule
+
