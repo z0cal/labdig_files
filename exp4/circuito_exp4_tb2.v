@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-module circuito_exp4_tb_modelo;
+module circuito_exp4_tb_cenario2;
 
     // Sinais para conectar com o DUT
     // valores iniciais para fins de simulacao (ModelSim)
@@ -129,6 +129,7 @@ module circuito_exp4_tb_modelo;
     end
 
   endmodule
+
 
 
 
