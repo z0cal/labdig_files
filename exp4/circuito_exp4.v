@@ -1,7 +1,5 @@
-
-
-module circuito_exp3_desafio (
-input            clock,
+module circuito_exp4 (
+	input            clock,
     input            reset,
     input            iniciar,
     input      [3:0] chaves,
@@ -22,54 +20,49 @@ input            clock,
     wire        zeraC, contaC;
     wire        zeraR, registraR;
     wire        fimC;
-    wire        igual;
+    wire        igual, jogada;
     
     wire [3:0]  s_db_contagem;
     wire [3:0]  s_db_memoria;
-    wire [3:0]  s_db_chaves;
+	wire [3:0]  db_jogada;
     wire [3:0]  s_db_estado;
 
     assign db_iniciar = iniciar;
     assign db_igual   = igual;
-    assign db_tem_jogada = sinal_pulso;
+    assign leds = db_jogada;
+	assign db_clock = clock;
 
-    edge_detector u_edge(
-        .clock      (clock),
-        .reset      (reset),
-        .pulso     (sinal_pulso),
-        .sinal     (iniciar)
-     );
-
-
-    exp3_unidade_controle u_uc (
+    unidade_controle u_uc (
         .clock      (clock),
         .reset      (reset),
         .iniciar    (iniciar),
-        .fimC       (fimC),
-		.chavesIgualMemoria	(igual),
-        .jogada     (sinal_pulso),
+        .fim        (fimC),
+		.igual  	(igual),
+		.jogada     (jogada),
         .zeraC      (zeraC),
         .contaC     (contaC),
         .zeraR      (zeraR),
         .registraR  (registraR),
         .pronto     (pronto),
-		  .acertou	  (acertou),
-		  .errou			(errou),
+		.acertou	(acertou),
+		.errou		(errou),
         .db_estado  (s_db_estado)
     );
 
-    exp3_fluxo_dados u_fd (
+    fluxo_dados u_fd (
         .clock              (clock),
         .chaves             (chaves),
         .zeraR              (zeraR),
         .registraR          (registraR),
         .contaC             (contaC),
         .zeraC              (zeraC),
-        .chavesIgualMemoria (igual),
+        .igual				(igual),
         .fimC               (fimC),
+		.jogada_feita		(jogada),
+		.db_tem_jogada		(db_tem_jogada),
         .db_contagem        (s_db_contagem),
-        .db_chaves          (s_db_chaves),
-        .db_memoria         (s_db_memoria)
+		.db_memoria         (s_db_memoria),
+		.db_jogada			(db_jogada)
     );
 
     hexa7seg u_hex_cont (
@@ -83,7 +76,7 @@ input            clock,
     );
 
     hexa7seg u_hex_chv (
-        .hex (s_db_chaves),
+		.hex (db_jogada),
         .seg (db_jogadafeita)
     );
 
