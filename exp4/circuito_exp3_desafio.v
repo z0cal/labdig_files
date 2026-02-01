@@ -31,23 +31,23 @@ input            clock,
 
     assign db_iniciar = iniciar;
     assign db_igual   = igual;
+    assign db_tem_jogada = sinal_pulso;
+
     edge_detector u_edge(
         .clock      (clock),
         .reset      (reset),
         .pulso     (sinal_pulso),
-        .sinal     ()
+        .sinal     (iniciar)
+     );
 
 
-
-
-
-    )
     exp3_unidade_controle u_uc (
         .clock      (clock),
         .reset      (reset),
         .iniciar    (iniciar),
         .fimC       (fimC),
-		  .chavesIgualMemoria	(igual),
+		.chavesIgualMemoria	(igual),
+        .jogada     (sinal_pulso),
         .zeraC      (zeraC),
         .contaC     (contaC),
         .zeraR      (zeraR),
@@ -91,5 +91,7 @@ input            clock,
         .hex (s_db_estado),
         .seg (db_estado)
     );
+    
+
 
 endmodule
