@@ -1,24 +1,22 @@
 
 
 module circuito_exp3_desafio (
-    input        clock,
-    input        reset,
-    input        iniciar,
-    input  [3:0] chaves,
-    output       pronto,
-	output		  acertou,
-	output		  errou,
-    output        pronto,
-    output reg [3:0] leds,
-    output       db_igual,
-    output       db_iniciar,
-    output [6:0] db_contagem,
-    output [6:0] db_memoria,
-    output [6:0] db_chaves,
-    output [6:0] db_estado,
-    output [6:0] db_jogadafeita,
-    output       db_clock,
-    output       db_tem_jogada
+input            clock,
+    input            reset,
+    input            iniciar,
+    input      [3:0] chaves,
+    output           acertou,
+    output           errou,
+    output           pronto,
+    output     [3:0] leds,
+    output           db_igual,
+    output     [6:0] db_contagem,
+    output     [6:0] db_memoria,
+    output     [6:0] db_estado,
+    output     [6:0] db_jogadafeita,
+    output           db_clock,
+    output           db_iniciar,
+    output           db_tem_jogada
 );
     wire        sinal_pulso;
     wire        zeraC, contaC;
@@ -37,7 +35,7 @@ module circuito_exp3_desafio (
         .clock      (clock),
         .reset      (reset),
         .pulso     (sinal_pulso),
-        .sinal
+        .sinal     ()
 
 
 
