@@ -43,10 +43,10 @@ module exp3_unidade_controle (
             espera_jogada: Eprox= jogada ? registra: espera_jogada;
             registra:    Eprox = comparacao;
             comparacao:  Eprox = (!chavesIgualMemoria) ? fim_erro : 
-											(fimC ? fim_acerto : proximo);
+									(fimC ? fim_acerto : proximo);
             proximo:     Eprox = espera_jogada;
-            fim_erro:     Eprox = inicial;
-				fim_acerto:	 Eprox = inicial;
+            fim_erro:   Eprox = iniciar ? preparacao : fim_erro;
+            fim_acerto: Eprox = iniciar ? preparacao : fim_acerto;
             default:     Eprox = inicial;
         endcase
     end
