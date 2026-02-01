@@ -84,7 +84,7 @@ input            clock,
 
     hexa7seg u_hex_chv (
         .hex (s_db_chaves),
-        .seg (db_chaves)
+        .seg (db_jogadafeita)
     );
 
     hexa7seg u_hex_est (
