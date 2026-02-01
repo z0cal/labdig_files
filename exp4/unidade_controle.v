@@ -1,4 +1,4 @@
-module exp3_unidade_controle (
+module unidade_controle (
     input      clock,
     input      reset,
     input      iniciar,
@@ -74,3 +74,4 @@ module exp3_unidade_controle (
 
 
 endmodule
+
