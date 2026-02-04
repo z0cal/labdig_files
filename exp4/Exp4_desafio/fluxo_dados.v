@@ -1,6 +1,7 @@
-    module fluxo_dados (
+module fluxo_dados (
         input        clock,
         input        zeraC,
+        input        reset,
         input        contaC,
         input        zeraR,
         input        registraR,
@@ -28,6 +29,7 @@
         assign db_contagem   = s_endereco;
         assign db_memoria    = s_dado;
         assign db_jogada     = s_chaves;
+        assign db_modo       = modoR;
         assign fim4          = (s_endereco == 4'd3);
         assign fim16         = (s_endereco == 4'd15);
         assign fimC          = (modoR == 1'b1 ) ? fim4 : fim16;
@@ -85,5 +87,5 @@
         .clock  ( clock ),
         .Q      ( s_chaves )
     );
-
- endmodule
+    
+endmodule

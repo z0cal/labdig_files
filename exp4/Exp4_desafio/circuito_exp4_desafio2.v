@@ -1,4 +1,4 @@
-module circuito_exp4 (
+module exp4_desafio2 (
 	input            clock,
     input            reset,
     input            iniciar,
@@ -18,21 +18,17 @@ module circuito_exp4 (
     output           db_modo,
     output           db_tem_jogada
 );
-    wire        sinal_pulso;
+
     wire        zeraC, contaC;
     wire        zeraR, registraR;
     wire        fimC;
     wire        igual, jogada;
     wire        s_db_modo;
-    wire        fim4;
-    
+
     wire [3:0]  s_db_contagem;
     wire [3:0]  s_db_memoria;
 	wire [3:0]  db_jogada;
     wire [3:0]  s_db_estado;
-
-    wire         modoR;
-    assign 		  modoR = modo;
 
 
     assign db_iniciar = iniciar;
@@ -62,6 +58,7 @@ module circuito_exp4 (
     fluxo_dados u_fd (
         .clock              (clock),
         .modoR              (modo),
+        .reset              (reset),
         .db_modo            (s_db_modo),
         .chaves             (chaves),
         .zeraR              (zeraR),
@@ -70,11 +67,11 @@ module circuito_exp4 (
         .zeraC              (zeraC),
         .igual				(igual),
         .fimC               (fimC),
-		  .jogada_feita		(jogada),
-		  .db_tem_jogada		(db_tem_jogada),
+		.jogada_feita		(jogada),
+		.db_tem_jogada		(db_tem_jogada),
         .db_contagem        (s_db_contagem),
-		  .db_memoria         (s_db_memoria),
-		  .db_jogada			(db_jogada)
+		.db_memoria         (s_db_memoria),
+		.db_jogada			(db_jogada)
     );
 
     hexa7seg u_hex_cont (
