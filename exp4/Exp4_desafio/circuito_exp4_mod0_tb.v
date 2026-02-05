@@ -22,7 +22,7 @@ module tb_circuito_exp4_modo0;
   wire        db_modo;
   wire        db_tem_jogada;
 
-  circuito_exp4 dut (
+  circuito_exp4_desafio2 dut (
     .clock(clock),
     .reset(reset),
     .iniciar(iniciar),

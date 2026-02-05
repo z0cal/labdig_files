@@ -1,4 +1,4 @@
-module exp4_desafio2 (
+module circuito_exp4_desafio2 (
 	input            clock,
     input            reset,
     input            iniciar,
@@ -24,6 +24,7 @@ module exp4_desafio2 (
     wire        fimC;
     wire        igual, jogada;
     wire        s_db_modo;
+    wire        modoR;
 
     wire [3:0]  s_db_contagem;
     wire [3:0]  s_db_memoria;
@@ -35,7 +36,7 @@ module exp4_desafio2 (
     assign db_igual   = igual;
     assign leds = db_jogada;
 	assign db_clock = clock;
-    assign db_modo = modo;
+    assign db_modo = s_db_modo;
 
 
     unidade_controle u_uc (
@@ -45,6 +46,8 @@ module exp4_desafio2 (
         .fim        (fimC),
 		.igual  	(igual),
 		.jogada     (jogada),
+        .modo       (modo),
+        .modoR      (modoR),
         .zeraC      (zeraC),
         .contaC     (contaC),
         .zeraR      (zeraR),
@@ -57,7 +60,7 @@ module exp4_desafio2 (
 
     fluxo_dados u_fd (
         .clock              (clock),
-        .modoR              (modo),
+        .modoR              (modoR),
         .reset              (reset),
         .db_modo            (s_db_modo),
         .chaves             (chaves),

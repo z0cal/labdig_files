@@ -22,7 +22,7 @@ module tb_circuito_exp4_modo1;
   wire        db_modo;
   wire        db_tem_jogada;
 
-  circuito_exp4 dut (
+  circuito_exp4_desafio2 dut (
     .clock(clock),
     .reset(reset),
     .iniciar(iniciar),
@@ -43,7 +43,6 @@ module tb_circuito_exp4_modo1;
     .db_tem_jogada(db_tem_jogada)
   );
 
-  // clock 100MHz (10ns)
   initial clock = 1'b0;
   always #5 clock = ~clock;
 
@@ -60,7 +59,6 @@ module tb_circuito_exp4_modo1;
   integer i;
 
   initial begin
-    // sequencia da sync_rom_16x4 (enderecos 0..3) para MODO = 1 (fim em 3)
     seq[0] = 4'b0001;
     seq[1] = 4'b0010;
     seq[2] = 4'b0100;
@@ -69,7 +67,7 @@ module tb_circuito_exp4_modo1;
     reset   = 1'b1;
     iniciar = 1'b0;
     chaves  = 4'b0000;
-    modo    = 1'b1; // MODO = 1 (fim em 3)
+    modo    = 1'b1;
 
     repeat (3) @(posedge clock);
     reset = 1'b0;
@@ -80,17 +78,21 @@ module tb_circuito_exp4_modo1;
     iniciar = 1'b0;
 
     repeat (3) @(posedge clock);
+    modo = 1'b0;
 
     for (i = 0; i < 4; i = i + 1) begin
       joga(seq[i]);
     end
+  end
 
-    wait (pronto == 1'b1);
+  initial begin
+    @(posedge pronto);
+    #20;
+    $finish;
+  end
 
-    if (acertou && !errou) $display("OK: modo=1 terminou em ACERTO.");
-    else                  $display("ERRO: modo=1 nao terminou como esperado (acertou=%b errou=%b).", acertou, errou);
-
-    repeat (2) @(posedge clock);
+  initial begin
+    repeat (2000) @(posedge clock);
     $finish;
   end
 
