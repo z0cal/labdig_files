@@ -62,7 +62,7 @@ module fluxo_dados (
         .fim        ( ),
         .meio       ( )
     );
-
+    //cotnas quantas jogadas devem ser verificadas
     contador_m #( .M(16), .N(4)) ContLmt (
         .clock      ( clock ),
         .zera_as    ( reset ),
@@ -72,7 +72,7 @@ module fluxo_dados (
         .fim        ( ),
         .meio       ( )
     );
-    
+    //limita a jogada a 3 segundos 
     contador_m #( .M(3000), .N(12)) ContTMR (
         .clock    ( clock ),
         .zera_as  ( reset ),
