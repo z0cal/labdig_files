@@ -108,7 +108,7 @@ module fluxo_dados (
         .AGBi   ( 1'b0 ),
         .AEBi   ( 1'b1 ),
         .ALBo   ( ),
-        .AGBo   ( enderecoMenorOuIgualLimite ),
+        .AGBo   ( s_enderecoMenorLimite ),
         .AEBo   ( enderecoIgualLimite )
     );
 

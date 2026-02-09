@@ -1,4 +1,4 @@
-module circuito_jogo_sequencias (
+module circuito_exp5 (
 	input            clock,
     input            reset,
     input            jogar,
@@ -20,62 +20,82 @@ module circuito_jogo_sequencias (
     output           db_tem_jogada
 );
 
-    wire        zeraC, contaC;
-    wire        zeraR, registraR;
-    wire        fimC;
-    wire        igual, jogada;
-    wire        s_db_modo;
+    wire        zeraE, contaE;
+    wire        zeraL, contaL;
+    wire        zeraTMR, contaTMR;
+    wire        zeraR;
+    wire        registraR;
+
+    wire        chavesIgualMemoria;
+    wire        enderecoIgualLimite;
+    wire        fimL;
+    wire        fimTMR;
+    wire        jogada_feita;
+
     wire        modoR;
 
     wire [3:0]  s_db_contagem;
     wire [3:0]  s_db_memoria;
-	wire [3:0]  db_jogada;
     wire [3:0]  s_db_estado;
+    wire [3:0]  s_db_jogada;
 
-
-    assign db_iniciar = jogar;
-    assign db_igual   = igual;
-    assign leds = db_jogada;
-	assign db_clock = clock;
-    assign db_modo = s_db_modo;
-
+    assign db_iniciar   = jogar;
+    assign db_igual     = chavesIgualMemoria;
+	assign db_clock     = clock;
+    assign db_modo      = modoR;
 
     unidade_controle u_uc (
         .clock      (clock),
         .reset      (reset),
         .iniciar    (jogar),
-        .fim        (fimC),
-		.igual  	(igual),
-		.jogada     (jogada),
+        .fim        (fimL),
+		.igual  	(chavesIgualMemoria),
+		.jogada     (jogada_feita),
         .modo       (modo),
-        .modoR      (modoR),
-        .zeraC      (zeraC),
-        .contaC     (contaC),
+        .fim_seq    (enderecoIgualLimite),
+        .timeout    (fimTMR),
+        .zeraL      (zeraL),
+        .zeraE      (zeraE),
+        .contaL     (contaL),
+        .contaE     (contaE),
+        .zeraTMR    (zeraTMR),
+        .contaTMR   (contaTMR),
         .zeraR      (zeraR),
         .registraR  (registraR),
         .pronto     (pronto),
 		.acertou	(ganhou),
 		.errou		(perdeu),
+        .modoR      (modoR),
         .db_estado  (s_db_estado)
     );
 
     fluxo_dados u_fd (
-        .clock              (clock),
-        .modoR              (modoR),
-        .reset              (reset),
-        .db_modo            (s_db_modo),
-        .chaves             (chaves),
-        .zeraR              (zeraR),
-        .registraR          (registraR),
-        .contaC             (contaC),
-        .zeraC              (zeraC),
-        .igual				(igual),
-        .fimC               (fimC),
-		.jogada_feita		(jogada),
-		.db_tem_jogada		(db_tem_jogada),
-        .db_contagem        (s_db_contagem),
-		.db_memoria         (s_db_memoria),
-		.db_jogada			(db_jogada)
+        .clock                      (clock),
+        .reset                      (reset),
+        .zeraE                      (zeraE),
+        .zeraL                      (zeraL),
+        .zeraTMR                    (zeraTMR),
+        .limpaR                     (zeraR),
+        .contaE                     (contaE),
+        .contaL                     (contaL),
+        .contaTMR                   (contaTMR),
+        .registraR                  (registraR),
+        .modoR                      (modoR),
+        .botoes                     (botoes),
+        .chavesIgualMemoria         (chavesIgualMemoria),
+        .enderecoIgualLimite        (enderecoIgualLimite),
+        .enderecoMenorOuIgualLimite (),
+        .fimL                       (fimL),
+        .fimE                       (),
+        .fimTMR                     (fimTMR),
+        .jogada_feita               (jogada_feita),
+        .db_tem_jogada              (db_tem_jogada),
+        .db_modo                    (),
+        .leds                       (leds),
+        .db_contagem                (s_db_contagem),
+        .db_memoria                 (s_db_memoria),
+        .db_limite                  (),
+        .db_jogada                  (s_db_jogada)
     );
 
     hexa7seg u_hex_cont (
@@ -89,7 +109,7 @@ module circuito_jogo_sequencias (
     );
 
     hexa7seg u_hex_chv (
-		.hex (db_jogada),
+		.hex (s_db_jogada),
         .seg (db_jogadafeita)
     );
 
@@ -97,7 +117,7 @@ module circuito_jogo_sequencias (
         .hex (s_db_estado),
         .seg (db_estado)
     );
-    
 
+    assign timeout = fimTMR;
 
 endmodule
