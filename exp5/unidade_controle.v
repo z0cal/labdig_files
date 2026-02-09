@@ -6,8 +6,16 @@ module unidade_controle (
 	input	   igual,
     input      jogada,
     input      modo,
-    output reg zeraC,
-    output reg contaC,
+    input      fim_seq,
+    input      timeout,
+   // output reg zeraC,
+    output reg zeraL, // resta de rodadas
+    output reg zeraE, //novas saidas zera o contador de end da memoria 
+    output reg contaL, // aumenta o nivel de dificuldade
+    output reg contaE, // antigo contaC
+    output reg zeraTMR,// zera o timer
+    output reg contaTMR,// conta o tempod da jogada
+  //  output reg contaC,
     output reg zeraR,
     output reg registraR,
     output reg pronto,
@@ -20,9 +28,11 @@ module unidade_controle (
     parameter inicial       = 4'b0000;  // 0
     parameter inicializa_el = 4'b0001;  // 1
     parameter espera_jogada = 4'b0010;  // 2
+    parameter inicia_seq    = 4'b0011;  // 3 estado novo 
     parameter registra      = 4'b0100;  // 4
     parameter comparacao    = 4'b0101;  // 5
     parameter proximo       = 4'b0110;  // 6
+    parameter ultima_jogada = 4'b0111;  // 7 estado novo
 	parameter fim_erro	    = 4'b1110;  // E
     parameter fim_acerto    = 4'b1111;  // F
     
@@ -48,12 +58,15 @@ module unidade_controle (
     always @* begin
         case (Eatual)
             inicial:     Eprox = iniciar ? inicializa_el : inicial;
-            inicializa_el:  Eprox = espera_jogada;
-            espera_jogada: Eprox= jogada ? registra: espera_jogada;
+            inicializa_el:  Eprox = inicia_seq;
+            inicia_seq:     Eprox= espera_jogada;
+            // NOVO: timeout encerra o jogo mesmo sem jogada
+            espera_jogada: Eprox= timeout ? fim_erro : (jogada ? registra: espera_jogada);
             registra:    Eprox = comparacao;
-			comparacao:  Eprox = (!igual) ? fim_erro : 
-									(fim ? fim_acerto : proximo);
+			comparacao:  Eprox = (!igual) ? fim_erro : (fim_seq ? ultima_jogada : proximo);
+            ultima_jogada: Eprox = fim ? fim_acerto : inicia_seq;
             proximo:     Eprox = espera_jogada;
+
             fim_erro:   Eprox = iniciar ? inicializa_el : fim_erro;
             fim_acerto: Eprox = iniciar ? inicializa_el : fim_acerto;
             default:     Eprox = inicial;
@@ -62,18 +75,26 @@ module unidade_controle (
 
     
     always @* begin
-		zeraC     = (Eatual == inicializa_el || Eatual == inicial) ? 1'b1 : 1'b0;
+
+
+        zeraL     = (Eatual == inicializa_el || Eatual == inicial) ? 1'b1 : 1'b0;
         zeraR     = (Eatual == inicial) ? 1'b1 : 1'b0;
         registraR = (Eatual == registra) ? 1'b1 : 1'b0;
-        contaC    = (Eatual == proximo) ? 1'b1 : 1'b0;
+        contaE    = (Eatual == proximo) ? 1'b1 : 1'b0;
 		pronto    = ((Eatual == fim_acerto) || (Eatual == fim_erro)) ? 1'b1 : 1'b0;
 		acertou	  = (Eatual == fim_acerto) ? 1'b1 : 1'b0;
 		errou	  = (Eatual == fim_erro) ? 1'b1 : 1'b0;
+        zeraE     = (Eatual == inicia_seq) ? 1'b1 : 1'b0;
+        contaL    = (Eatual== ultima_jogada) ? 1'b1 : 1'b0;
+        // NOVO: controla timer (zera ao iniciar espera, conta enquanto espera)
+        zeraTMR   = (Eatual == inicia_seq) ? 1'b1 : 1'b0;
+        contaTMR  = (Eatual == espera_jogada) ? 1'b1 : 1'b0;
 
         case (Eatual)
             inicial:        db_estado = 4'b0000;  // 0
             inicializa_el:  db_estado = 4'b0001;  // 1
             espera_jogada:  db_estado = 4'b0010;  // 2
+            inicia_seq:     db_estado = 4'b0011;  // 3
             registra:       db_estado = 4'b0100;  // 4
             comparacao:     db_estado = 4'b0101;  // 5
             proximo:        db_estado = 4'b0110;  // 6
