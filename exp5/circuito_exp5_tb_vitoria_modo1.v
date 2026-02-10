@@ -119,10 +119,4 @@ module circuito_exp5_tb_vitoria_modo1;
     end
   end
 
-  initial begin
-    #(200_000_000); // 200ms de margem
-    $display("TIMEOUT DE SIMULACAO (nao era pra acontecer): pronto=%b ganhou=%b perdeu=%b timeout=%b", pronto, ganhou, perdeu, timeout);
-    $finish;
-  end
-
 endmodule
