@@ -17,8 +17,7 @@ module circuito_exp5 (
     output           db_clock,
     output           db_iniciar,
     output           db_modo,
-    output           db_tem_jogada,
-	 output 		[6:0] db_limite
+    output           db_tem_jogada
 );
 
     wire        zeraE, contaE;
@@ -39,9 +38,7 @@ module circuito_exp5 (
     wire [3:0]  s_db_memoria;
     wire [3:0]  s_db_estado;
     wire [3:0]  s_db_jogada;
-	 wire [3:0]  s_db_limite;
 
-	 
     assign db_iniciar   = jogar;
     assign db_igual     = chavesIgualMemoria;
 	assign db_clock     = clock;
@@ -93,11 +90,11 @@ module circuito_exp5 (
         .fimTMR                     (fimTMR),
         .jogada_feita               (jogada_feita),
         .db_tem_jogada              (db_tem_jogada),
-        .db_modo                    (db_modo),
+        .db_modo                    (),
         .leds                       (leds),
         .db_contagem                (s_db_contagem),
         .db_memoria                 (s_db_memoria),
-        .db_limite                  (s_db_limite),
+        .db_limite                  (),
         .db_jogada                  (s_db_jogada)
     );
 
@@ -121,12 +118,6 @@ module circuito_exp5 (
         .seg (db_estado)
     );
 
-	 
-    hexa7seg u_hex_lim (
-        .hex (s_db_limite),
-        .seg (db_limite)
-    );
-	 
     assign timeout = fimTMR;
 
 endmodule

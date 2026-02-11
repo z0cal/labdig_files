@@ -33,8 +33,7 @@ module fluxo_dados (
         wire   [3:0] s_limite;
         wire         s_tem_jogada;
         wire         s_enderecoMenorLimite;
-			
-			
+
         assign s_tem_jogada  = |botoes;
         assign db_tem_jogada = s_tem_jogada;
         assign db_contagem   = s_endereco;
@@ -76,7 +75,7 @@ module fluxo_dados (
     //limita a jogada a 3 segundos 
     contador_m #( .M(3000), .N(12)) ContTMR (
         .clock    ( clock ),
-        .zera_as  ( s_tem_jogada ),
+        .zera_as  ( reset ),
         .zera_s   ( zeraTMR ),
         .conta    ( contaTMR ),
         .Q        ( ),
