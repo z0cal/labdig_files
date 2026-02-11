@@ -10,6 +10,7 @@ module fluxo_dados (
         input        contaTMR,
         input        registraR,
         input        modoR,
+        input        conf_leds,
         input  [3:0] botoes,
         output       chavesIgualMemoria,
         output       enderecoIgualLimite,
@@ -44,7 +45,7 @@ module fluxo_dados (
         assign db_limite     = s_limite;
         assign fimE          = (modoR == 1'b1 ) ? (s_endereco == 4'd3) : (s_endereco == 4'd15);
         assign fimL          = (modoR == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);    
-        assign leds          = s_jogada;
+        assign leds          = s_jogada&&(~conf_leds);
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
         
     edge_detector u_edge(
