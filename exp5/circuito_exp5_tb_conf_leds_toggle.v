@@ -89,7 +89,16 @@ module circuito_exp5_tb_conf_leds_toggle;
   endtask
 
   task automatic expect_leds_only(input [3:0] v);
+    integer i;
     begin
+      // espera até o registrador de jogada refletir o valor (latência interna)
+      for (i = 0; i < 20; i = i + 1) begin
+        if (leds === v) begin
+          i = 20;
+        end else begin
+          @(posedge clock);
+        end
+      end
       if (leds !== v) begin
         $display("ERRO: leds esperado=%b obtido=%b (t=%0t)", v, leds, $time);
         $finish;
@@ -103,8 +112,17 @@ module circuito_exp5_tb_conf_leds_toggle;
 
   task automatic expect_rgb_only(input [3:0] v);
     reg [2:0] expected;
+    integer i;
     begin
       expected = map_rgb(v);
+      // espera até a saída RGB refletir o valor (latência interna)
+      for (i = 0; i < 20; i = i + 1) begin
+        if (db_rgb === expected) begin
+          i = 20;
+        end else begin
+          @(posedge clock);
+        end
+      end
       if (db_rgb !== expected) begin
         $display("ERRO: db_rgb esperado=%b obtido=%b (t=%0t)", expected, db_rgb, $time);
         $finish;
