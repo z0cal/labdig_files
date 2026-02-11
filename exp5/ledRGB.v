@@ -11,9 +11,9 @@ module ledRGB (
         end else begin
             case (codigo)
                 4'b0001: rgb = 3'b010; // Vermelho
-                4'b0010: rgb = 3'b001; // Azul
-                4'b0100: rgb = 3'b110; // Amarelo (vermelho + verde)
-                4'b1000: rgb = 3'b100; // Verde
+                4'b0010: rgb = 3'b100; // Azul
+                4'b0100: rgb = 3'b011; // Amarelo (vermelho + verde)
+                4'b1000: rgb = 3'b001; // Verde
                 default: rgb = 3'b000; // Apagado
             endcase
         end

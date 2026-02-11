@@ -9,7 +9,7 @@ module circuito_exp5 (
     output           perdeu,
     output           pronto,
     output     [3:0] leds,
-    output     [2:0] rgb,
+    output     [2:0] db_rgb,
     output           timeout,
     output           db_igual,
     output     [6:0] db_contagem,
@@ -132,8 +132,8 @@ module circuito_exp5 (
 
     ledRGB rgb(
         .conf_leds (conf_leds),
-        .codigo    (botoes),
-        .rgb       (rgb)
+        .codigo    (s_db_jogada),
+        .rgb       (db_rgb)
     );
 	 
     assign timeout = fimTMR;
