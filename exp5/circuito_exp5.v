@@ -4,6 +4,7 @@ module circuito_exp5 (
     input            jogar,
     input      [3:0] botoes,
     input            modo,
+    input            conf_leds,
     output           ganhou,
     output           perdeu,
     output           pronto,
