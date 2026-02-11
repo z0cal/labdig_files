@@ -4,6 +4,7 @@ module circuito_exp5 (
     input            jogar,
     input      [3:0] botoes,
     input            modo,
+    input            conf_leds,
     output           ganhou,
     output           perdeu,
     output           pronto,
@@ -17,7 +18,8 @@ module circuito_exp5 (
     output           db_clock,
     output           db_iniciar,
     output           db_modo,
-    output           db_tem_jogada
+    output           db_tem_jogada,
+    output     [2:0] rgb
 );
 
     wire        zeraE, contaE;
