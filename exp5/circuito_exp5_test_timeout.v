@@ -32,7 +32,7 @@ module circuito_exp5_tb_modo0_timeout;
     modo=1'b0;
     jogar=1'b1; repeat(2) @(posedge clock); jogar=1'b0;
 
-    // Não aperta nada por ~3.2s (3200 ciclos de 1kHz)
+    //não aperta nada por ~3.2s (3200 ciclos de 1kHz)
     repeat(3200) @(posedge clock);
 
     $display("apos espera: pronto=%b ganhou=%b perdeu=%b timeout=%b", pronto, ganhou, perdeu, timeout);

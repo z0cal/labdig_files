@@ -109,19 +109,14 @@ module circuito_exp5_tb_vitoria_modo0;
         press(rom[k]);
       end
     end
-
-    repeat (200) @(posedge clock);
-    $display("Fim: pronto=%b ganhou=%b perdeu=%b timeout=%b", pronto, ganhou, perdeu, timeout);
-    $finish;
   end
 
   always @(posedge clock) begin
-    if (pronto) begin
-      $display("PRONTO: ganhou=%b perdeu=%b timeout=%b (t=%0t)", ganhou, perdeu, timeout, $time);
+    if (ganhou) begin
+      $display("GANHOU: pronto=%b ganhou=%b perdeu=%b timeout=%b (t=%0t)", pronto, ganhou, perdeu, timeout, $time);
       #1;
       $finish;
     end
   end
-
 
 endmodule

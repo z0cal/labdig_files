@@ -40,7 +40,7 @@ module circuito_exp5_tb_modo0_erro_primeira;
     jogar=1'b1; repeat(2) @(posedge clock); jogar=1'b0;
     repeat(5) @(posedge clock);
 
-    // Errar de propósito (esperado ROM[0]=0001; envia 0010)
+    // errar de propósito (esperado ROM[0]=0001; envia 0010)
     press(4'b0010);
 
     repeat(50) @(posedge clock);

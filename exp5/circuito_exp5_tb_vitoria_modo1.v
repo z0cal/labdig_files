@@ -24,7 +24,7 @@ module circuito_exp5_tb_vitoria_modo1;
   wire        db_modo;
   wire        db_tem_jogada;
 
-  localparam integer CLK_PERIOD_NS = 1_000_000; // 1kHz => 1ms
+  localparam integer CLK_PERIOD_NS = 1_000_000; //
 
   circuito_exp5 dut (
     .clock(clock),
@@ -81,11 +81,8 @@ module circuito_exp5_tb_vitoria_modo1;
     repeat (5) @(posedge clock);
     reset = 1'b0;
 
-    // modo=1 deve ser escolhido ANTES do jogar (e depois ignorado)
     start_game(1'b1);
 
-    // ROM (sync_rom_16x4): 0:0001, 1:0010, 2:0100, 3:1000...
-    // Rodadas (modo=1): 1, depois 2, depois 3, depois 4 => total 10 jogadas corretas
     // 1ª rodada (1)
     press(4'b0001);
 
