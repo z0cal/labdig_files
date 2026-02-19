@@ -9,7 +9,7 @@ module fluxo_dados (
         input        contaL,
         input        contaTMR,
         input        registraR,
-        input        modoR,
+        input   [1:0]configuracaoR,
         input        conf_leds,
         input  [3:0] botoes,
         output       chavesIgualMemoria,
@@ -20,7 +20,7 @@ module fluxo_dados (
         output       fimTMR,
         output       jogada_feita,
         output       db_tem_jogada,
-        output       db_modo,
+        output [1:0] db_configuracao,
         output [3:0] leds,
         output [3:0] db_contagem,
         output [3:0] db_memoria,
@@ -34,6 +34,7 @@ module fluxo_dados (
         wire   [3:0] s_limite;
         wire         s_tem_jogada;
         wire         s_enderecoMenorLimite;
+        wire         reset_cont;
 			
 			
         assign s_tem_jogada  = |botoes;
@@ -41,12 +42,13 @@ module fluxo_dados (
         assign db_contagem   = s_endereco;
         assign db_memoria    = s_dado;
         assign db_jogada     = s_jogada;
-        assign db_modo       = modoR;
+        assign db_configuracao       = configuracaoR;
         assign db_limite     = s_limite;
-        assign fimE          = (modoR == 1'b1 ) ? (s_endereco == 4'd3) : (s_endereco == 4'd15);
-        assign fimL          = (modoR == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);    
+        assign fimE          = (configuracaoR[0] == 1'b1 ) ? (s_endereco == 4'd3) : (s_endereco == 4'd15); //alterei de modoR para o sinal de configuracaoR
+        assign fimL          = (configuracaoR[0] == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);// esse tambem 
         assign leds          = s_jogada&&(~conf_leds);
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
+        assign reset_cont = (configuracaoR[1]) ? s_tem_jogada : 1'b1; //implementacao do modo com reset ou nao
         
     edge_detector u_edge(
         .clock  (clock),
@@ -74,10 +76,10 @@ module fluxo_dados (
         .fim        ( ),
         .meio       ( )
     );
-    //limita a jogada a 3 segundos 
-    contador_m #( .M(3000), .N(12)) ContTMR (
+    //limita a jogada a  5 segundos 
+    contador_m #( .M(5000), .N(12)) ContTMR (
         .clock    ( clock ),
-        .zera_as  ( s_tem_jogada ),
+        .zera_as  ( reset_cont ),
         .zera_s   ( zeraTMR ),
         .conta    ( contaTMR ),
         .Q        ( ),

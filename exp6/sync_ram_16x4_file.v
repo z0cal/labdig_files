@@ -1,7 +1,6 @@
 //------------------------------------------------------------------
 // Arquivo   : sync_ram_16x4_file.v
 // Projeto   : Experiencia 7 - Projeto do Jogo do Desafio da Memória
- 
 //------------------------------------------------------------------
 // Descricao : RAM sincrona 16x4
 //

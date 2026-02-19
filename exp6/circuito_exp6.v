@@ -1,14 +1,15 @@
-module circuito_exp5 (
+module circuito_exp6 (
 	input            clock,
     input            reset,
     input            jogar,
     input      [3:0] botoes,
     input            modo,
     input            conf_leds,
+    input            configuracao,
     output           ganhou,
     output           perdeu,
     output           pronto,
-    output     [3:0] leds,
+    //output     [3:0] leds, //acho que led foi para o caralho 
     output     [2:0] db_rgb,
     output           timeout,
     output           db_igual,
@@ -35,7 +36,7 @@ module circuito_exp5 (
     wire        fimTMR;
     wire        jogada_feita;
 
-    wire        modoR;
+    wire        configuracaoR;
 
     wire [3:0]  s_db_contagem;
     wire [3:0]  s_db_memoria;
@@ -47,7 +48,7 @@ module circuito_exp5 (
     assign db_iniciar   = jogar;
     assign db_igual     = chavesIgualMemoria;
 	assign db_clock     = clock;
-    assign db_modo      = modoR;
+    assign db_congiguracao     = configuracaoR;
 
     unidade_controle u_uc (
         .clock      (clock),
