@@ -36,10 +36,11 @@ module fluxo_dados (
         wire         s_tem_jogada;
         wire         s_enderecoMenorLimite;
         wire         reset_cont;
+        wire         fimLedTMR;
         reg          s_led_ativo;
-        reg  [10:0]  s_led_timer;
         reg  [3:0]   s_led_codigo;
         reg          s_exibe_mem_pendente;
+        reg          s_inicia_exibicao;
 			
 			
         assign s_tem_jogada  = |botoes;
@@ -62,35 +63,33 @@ module fluxo_dados (
     always @(posedge clock or posedge reset) begin
         if (reset) begin
             s_led_ativo        <= 1'b0;
-            s_led_timer        <= 11'd0;
             s_led_codigo       <= 4'b0000;
             s_exibe_mem_pendente <= 1'b0;
+            s_inicia_exibicao  <= 1'b0;
         end else if (limpaR) begin
             s_led_ativo        <= 1'b0;
-            s_led_timer        <= 11'd0;
             s_led_codigo       <= 4'b0000;
             s_exibe_mem_pendente <= 1'b0;
+            s_inicia_exibicao  <= 1'b0;
         end else begin
+            s_inicia_exibicao <= 1'b0;
+
             if (zeraE) begin
                 s_exibe_mem_pendente <= 1'b1;
             end
 
             if (jogada_feita) begin
                 s_led_ativo        <= 1'b1;
-                s_led_timer        <= 11'd0;
                 s_led_codigo       <= s_jogada;
                 s_exibe_mem_pendente <= 1'b0;
+                s_inicia_exibicao  <= 1'b1;
             end else if (s_exibe_mem_pendente) begin
                 s_led_ativo        <= 1'b1;
-                s_led_timer        <= 11'd0;
                 s_led_codigo       <= s_dado;
                 s_exibe_mem_pendente <= 1'b0;
-            end else if (s_led_ativo) begin
-                if (s_led_timer == 11'd1999) begin
-                    s_led_ativo <= 1'b0;
-                end else begin
-                    s_led_timer <= s_led_timer + 11'd1;
-                end
+                s_inicia_exibicao  <= 1'b1;
+            end else if (s_led_ativo && fimLedTMR) begin
+                s_led_ativo <= 1'b0;
             end
         end
     end
@@ -130,6 +129,17 @@ module fluxo_dados (
         .Q        ( ),
         .fim      ( fimTMR ),
         .meio     ( )
+    );
+
+    // temporizador da exibicao dos LEDs (2 segundos)
+    contador_m #( .M(2000), .N(11)) ContLED (
+        .clock      ( clock ),
+        .zera_as    ( reset | limpaR ),
+        .zera_s     ( s_inicia_exibicao ),
+        .conta      ( s_led_ativo ),
+        .Q          ( ),
+        .fim        ( fimLedTMR ),
+        .meio       ( )
     );
 
 
