@@ -36,6 +36,10 @@ module fluxo_dados (
         wire         s_tem_jogada;
         wire         s_enderecoMenorLimite;
         wire         reset_cont;
+        reg          s_led_ativo;
+        reg  [10:0]  s_led_timer;
+        reg  [3:0]   s_led_codigo;
+        reg          s_exibe_mem_pendente;
 			
 			
         assign s_tem_jogada  = |botoes;
@@ -47,9 +51,49 @@ module fluxo_dados (
         assign db_limite     = s_limite;
         assign fimE          = (configuracaoR[0] == 1'b1 ) ? (s_endereco == 4'd3) : (s_endereco == 4'd15); //alterei de modoR para o sinal de configuracaoR
         assign fimL          = (configuracaoR[0] == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);// esse tambem 
-        assign leds          = s_jogada&&(~conf_leds);
+        assign leds          = s_led_ativo ? s_led_codigo : 4'b0000;
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
         assign reset_cont = (configuracaoR[1]) ? s_tem_jogada : 1'b1; //implementacao do modo com timer ou nao
+
+    // Exibe a jogada por 2 segundos (clock de 1 kHz -> 2000 ciclos)
+    // Eventos de exibicao:
+    // - inicio de rodada: mostra a jogada atual da memoria (s_dado)
+    // - jogada do jogador: mostra a jogada capturada (s_jogada)
+    always @(posedge clock or posedge reset) begin
+        if (reset) begin
+            s_led_ativo        <= 1'b0;
+            s_led_timer        <= 11'd0;
+            s_led_codigo       <= 4'b0000;
+            s_exibe_mem_pendente <= 1'b0;
+        end else if (limpaR) begin
+            s_led_ativo        <= 1'b0;
+            s_led_timer        <= 11'd0;
+            s_led_codigo       <= 4'b0000;
+            s_exibe_mem_pendente <= 1'b0;
+        end else begin
+            if (zeraE) begin
+                s_exibe_mem_pendente <= 1'b1;
+            end
+
+            if (jogada_feita) begin
+                s_led_ativo        <= 1'b1;
+                s_led_timer        <= 11'd0;
+                s_led_codigo       <= s_jogada;
+                s_exibe_mem_pendente <= 1'b0;
+            end else if (s_exibe_mem_pendente) begin
+                s_led_ativo        <= 1'b1;
+                s_led_timer        <= 11'd0;
+                s_led_codigo       <= s_dado;
+                s_exibe_mem_pendente <= 1'b0;
+            end else if (s_led_ativo) begin
+                if (s_led_timer == 11'd1999) begin
+                    s_led_ativo <= 1'b0;
+                end else begin
+                    s_led_timer <= s_led_timer + 11'd1;
+                end
+            end
+        end
+    end
         
     edge_detector u_edge(
         .clock  (clock),
