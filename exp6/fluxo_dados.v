@@ -12,6 +12,7 @@ module fluxo_dados (
         input   [1:0]configuracaoR,
         input        conf_leds,
         input  [3:0] botoes,
+        input        we,
         output       chavesIgualMemoria,
         output       enderecoIgualLimite,
         output       enderecoMenorOuIgualLimite,    
@@ -48,7 +49,7 @@ module fluxo_dados (
         assign fimL          = (configuracaoR[0] == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);// esse tambem 
         assign leds          = s_jogada&&(~conf_leds);
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
-        assign reset_cont = (configuracaoR[1]) ? s_tem_jogada : 1'b1; //implementacao do modo com reset ou nao
+        assign reset_cont = (configuracaoR[1]) ? s_tem_jogada : 1'b1; //implementacao do modo com timer ou nao
         
     edge_detector u_edge(
         .clock  (clock),
@@ -88,10 +89,12 @@ module fluxo_dados (
     );
 
 
-    sync_rom_16x4 MemJog (
-        .clock    ( clock ),
-        .address  ( s_endereco ),
-        .data_out ( s_dado )
+    sync_ram_16x4_file MemJog (
+        .clk    ( clock ),
+        .addr  ( s_endereco ),
+        .we     ( we ),
+        .data   ( s_jogada),
+        .q  ( s_dado )
     );
 
     comparador_85 CompJog (

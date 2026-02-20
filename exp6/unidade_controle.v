@@ -24,7 +24,8 @@ module unidade_controle (
 	output reg errou,
   //output reg modoR,
    output reg [1:0] configuracaoR,
-    output reg [3:0] db_estado
+    output reg [3:0] db_estado,
+    output reg escreveMem
 );
     
     parameter inicial       = 4'b0000;  // 0
@@ -35,6 +36,8 @@ module unidade_controle (
     parameter comparacao    = 4'b0101;  // 5
     parameter proximo       = 4'b0110;  // 6
     parameter ultima_jogada = 4'b0111;  // 7 estado novo
+    parameter registra_nova = 4'b1000;  // estado para registrar a jogada e dar tempo para estabilizar os sinais de vao ser registraodos
+    parameter grava_nova    = 4'b1001;  // grava a nova jogada
   	parameter fim_erro	    = 4'b1110;  // E
     parameter fim_acerto    = 4'b1111;  // F
     
@@ -65,7 +68,9 @@ module unidade_controle (
             espera_jogada: Eprox= timeout ? fim_erro : (jogada ? registra: espera_jogada);
             registra:    Eprox = comparacao;
 			      comparacao:  Eprox = (!igual) ? fim_erro : (fim_seq ? ultima_jogada : proximo);
-            ultima_jogada: Eprox = fim ? fim_acerto : inicia_seq;
+            ultima_jogada: Eprox = fim ? fim_acerto : registra_nova;
+            registra_nova: Eprox = jogada ? grava_nova : registra_nova;
+            grava_nova:   Eprox = inicia_seq;
             proximo:     Eprox = espera_jogada;
             fim_erro:   Eprox = iniciar ? inicializa_el : fim_erro;
             fim_acerto: Eprox = iniciar ? inicializa_el : fim_acerto;
@@ -79,7 +84,7 @@ module unidade_controle (
 
         zeraL     = (Eatual == inicializa_el || Eatual == inicial) ? 1'b1 : 1'b0;
         zeraR     = (Eatual == inicial) ? 1'b1 : 1'b0;
-        registraR = (Eatual == registra) ? 1'b1 : 1'b0;
+        registraR = (Eatual == registra || (Eatual== registra_nova)&&jogada) ? 1'b1 : 1'b0;//registra fica 1 quando tem jogada apenas 
         contaE    = (Eatual == proximo) ? 1'b1 : 1'b0;
 	    	pronto    = ((Eatual == fim_acerto) || (Eatual == fim_erro)) ? 1'b1 : 1'b0;
 		    acertou  = (Eatual == fim_acerto) ? 1'b1 : 1'b0;
@@ -89,6 +94,8 @@ module unidade_controle (
         // NOVO: controla timer (zera ao iniciar espera, conta enquanto espera)
         zeraTMR   = (Eatual == inicia_seq) ? 1'b1 : 1'b0;
         contaTMR = ((Eatual == espera_jogada) && configuracaoR[1]) ? 1'b1 : 1'b0; //alterei por seguranca, vai que o conta causa um bug memso com o reset ativo
+        //NOVOS : controle da ram 
+        escreveMem = (Eatual== grava_nova)? 1'b1 : 1'b0;
 
 
         case (Eatual)
@@ -99,9 +106,12 @@ module unidade_controle (
             registra:       db_estado = 4'b0100;  // 4
             comparacao:     db_estado = 4'b0101;  // 5
             proximo:        db_estado = 4'b0110;  // 6
+            ultima_jogada:  db_estado = 4'b0111;  // 7
+            registra_nova:  db_estado = 4'b1000;  // 8
+            grava_nova:     db_estado = 4'b1001;  // 9
             fim_acerto:     db_estado = 4'b1111;  // F
-			fim_erro:             db_estado = 4'b1110;  // E
-				
+				fim_erro:             db_estado = 4'b1110;  // E
+					
             default:     db_estado = 4'b1110;     // E (erro)
         endcase
     end
