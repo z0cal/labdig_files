@@ -10,7 +10,6 @@ module fluxo_dados (
         input        contaTMR,
         input        registraR,
         input        modoR,
-        input        conf_leds,
         input  [3:0] botoes,
         output       chavesIgualMemoria,
         output       enderecoIgualLimite,
@@ -34,8 +33,7 @@ module fluxo_dados (
         wire   [3:0] s_limite;
         wire         s_tem_jogada;
         wire         s_enderecoMenorLimite;
-			
-			
+
         assign s_tem_jogada  = |botoes;
         assign db_tem_jogada = s_tem_jogada;
         assign db_contagem   = s_endereco;
@@ -45,7 +43,7 @@ module fluxo_dados (
         assign db_limite     = s_limite;
         assign fimE          = (modoR == 1'b1 ) ? (s_endereco == 4'd3) : (s_endereco == 4'd15);
         assign fimL          = (modoR == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);    
-        assign leds          = s_jogada&&(~conf_leds);
+        assign leds          = s_jogada;
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
         
     edge_detector u_edge(
@@ -77,7 +75,7 @@ module fluxo_dados (
     //limita a jogada a 3 segundos 
     contador_m #( .M(3000), .N(12)) ContTMR (
         .clock    ( clock ),
-        .zera_as  ( s_tem_jogada ),
+        .zera_as  ( reset ),
         .zera_s   ( zeraTMR ),
         .conta    ( contaTMR ),
         .Q        ( ),

@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> e755a1c983e76ae19eb01f10fe39652863ef40ea
 module hexa7seg (
     input  [3:0] hex,
     output reg [6:0] seg
@@ -27,8 +23,4 @@ module hexa7seg (
             default: seg = 7'b1111111;
         endcase
     end
-<<<<<<< HEAD
 endmodule
-=======
-endmodule
->>>>>>> e755a1c983e76ae19eb01f10fe39652863ef40ea

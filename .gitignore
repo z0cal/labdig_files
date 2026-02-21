@@ -6,6 +6,7 @@ output_files/
 greybox_tmp/
 qdb/
 cdb/
+.nvim/
 
 *.rpt
 *.summary
@@ -36,3 +37,10 @@ vsim.wlf
 
 ip/
 .ip/
+
+# Artefatos de simulacao
+*.vcd
+*.out
+tb*.out
+
+# Evidencias geradas por teste

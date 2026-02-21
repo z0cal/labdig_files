@@ -3,7 +3,7 @@ module unidade_controle (
     input      reset,
     input      iniciar,
     input      fim,
-	 input	   igual,
+	input	   igual,
     input      jogada,
     input      modo,
     input      fim_seq,
@@ -63,7 +63,7 @@ module unidade_controle (
             // NOVO: timeout encerra o jogo mesmo sem jogada
             espera_jogada: Eprox= timeout ? fim_erro : (jogada ? registra: espera_jogada);
             registra:    Eprox = comparacao;
-			   comparacao:  Eprox = (!igual) ? fim_erro : (fim_seq ? ultima_jogada : proximo);
+			comparacao:  Eprox = (!igual) ? fim_erro : (fim_seq ? ultima_jogada : proximo);
             ultima_jogada: Eprox = fim ? fim_acerto : inicia_seq;
             proximo:     Eprox = espera_jogada;
 

@@ -1,0 +1,25 @@
+Quartus Prime Archive log --	C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/labdig/exp5/circuito_exp5.qarlog
+
+Archive:	C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/labdig/exp5/circuito_exp5.qar
+Date:		Wed Feb 11 10:54:36 2026
+Quartus Prime		20.1.1 Build 720 11/11/2020 SJ Lite Edition
+
+	=========== Files Selected: ===========
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/labdig/exp5/assignment_defaults.qdf
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/labdig/exp5/circuito_exp5.qpf
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/labdig/exp5/circuito_exp5.qsf
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/circuito_exp5.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/comparador_85.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/contador_m.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/edge_detector.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/fluxo_dados.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/hexa7seg.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/mux2x1.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/mux2x1_tb.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/registrador_4.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/sync_rom_16x4.v
+C:/Projetos/T4B07/exp5_T4B07-ativ5/exp5_T4B07-ativ5_restored/programming/labdig/labdig_files/exp5/unidade_controle.v
+	======= Total: 14 files to archive =======
+
+	================ Status: ===============
+All files archived successfully.
