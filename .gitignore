@@ -37,3 +37,11 @@ vsim.wlf
 
 ip/
 .ip/
+
+# Artefatos de simulacao
+*.vcd
+*.out
+tb*.out
+
+# Evidencias geradas por teste
+*_acertos.pdf

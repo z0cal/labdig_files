@@ -42,6 +42,9 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
         .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada)
     );
 
+    localparam ST_ESPERA_JOGADA = 4'b0010;
+    localparam ST_REGISTRA_NOVA = 4'b1000;
+
     always #0.5 clock = ~clock; // Clock de 1kHz
 
     task apertar_botao(input [3:0] valor);
@@ -53,20 +56,27 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
     end
     endtask
 
-    reg [3:0] gabarito [0:15]; 
+    task espera_estado(input [3:0] estado, input integer limite_ms);
+        integer t;
+    begin
+        t = 0;
+        while ((db_estado !== estado) && (t < limite_ms)) begin
+            #1;
+            t = t + 1;
+        end
+        if (db_estado !== estado) begin
+            $display("ERRO: timeout aguardando estado %b em t=%0t", estado, $time);
+            $finish;
+        end
+    end
+    endtask
+
     integer i, j;
+    reg [3:0] nova_jogada;
 
     initial begin
         $dumpfile("jogo_vence_16.vcd");
         $dumpvars(0, circuito_exp6_tb1);
-
-        // Define sequencia de cores (Vermelho, Azul, Amarelo, Verde...)
-        for (i = 0; i < 16; i = i + 1) begin
-            case (i % 4)
-                0: gabarito[i] = 4'b0001; 1: gabarito[i] = 4'b0010;
-                2: gabarito[i] = 4'b0100; 3: gabarito[i] = 4'b1000;
-            endcase
-        end
 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000;
         configuracao = 2'b00; // Modo normal 16 rodadas
@@ -74,18 +84,36 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
         #2 reset = 0;
         #2 jogar = 1; #2 jogar = 0; 
 
+        // Nova jogada em padrao ciclico: vermelho, azul, amarelo, verde
+        nova_jogada = 4'b0001;
+
         for (i = 0; i < 16; i = i + 1) begin
             $display("Iniciando Rodada %0d...", i + 1);
-            for (j = 0; j < i; j = j + 1) begin
-                wait(db_estado == 4'b0010); // Estado espera_jogada
-                apertar_botao(gabarito[j]);
+
+            // Repete a sequencia atual (inclui a primeira jogada ja existente)
+            for (j = 0; j <= i; j = j + 1) begin
+                espera_estado(ST_ESPERA_JOGADA, 15000);
+                // Pressiona exatamente o valor esperado da memoria no endereco atual
+                apertar_botao(s_db_memoria);
             end
-            wait(db_estado == 4'b1000); // Estado registra_nova
-            apertar_botao(gabarito[i]);
-            #50; 
+
+            // Rodadas 1..15: adiciona uma nova jogada
+            if (i < 15) begin
+                espera_estado(ST_REGISTRA_NOVA, 15000);
+                apertar_botao(nova_jogada);
+                case (nova_jogada)
+                    4'b0001: nova_jogada = 4'b0010;
+                    4'b0010: nova_jogada = 4'b0100;
+                    4'b0100: nova_jogada = 4'b1000;
+                    default: nova_jogada = 4'b0001;
+                endcase
+            end
+
+            #20;
         end
 
-        wait(ganhou == 1); //
+        espera_estado(4'b1111, 20000); // fim_acerto
+        wait(ganhou == 1);
         $display("SUCESSO: Jogador venceu as 16 rodadas!");
         #200; $finish;
     end
