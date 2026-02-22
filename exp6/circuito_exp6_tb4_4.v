@@ -1,6 +1,6 @@
 `timescale 1ms/100us 
 
-module circuito_exp6_tb4_4;
+module circuito_exp6_tb4;
 
     reg clock, reset, jogar; 
     reg [1:0] configuracao; 
@@ -12,12 +12,30 @@ module circuito_exp6_tb4_4;
      
     wire s_zeraL, s_zeraE, s_contaL, s_contaE, s_zeraTMR, s_contaTMR, s_zeraR, s_registraR, s_escreveMem; 
     wire [1:0] s_configuracaoR; 
-    wire s_chavesIgualMemoria, s_enderecoIgualLimite, s_enderecoMenorOuIgualLimite, s_fimL, s_fimE, s_fimTMR, s_jogada_feita; 
+    wire s_chavesIgualMemoria, s_enderecoIgualLimite, s_enderecoMenorOuIgualLimite; 
+    wire s_fimL, s_fimE, s_fimTMR, s_jogada_feita; 
     wire [3:0] s_db_contagem, s_db_memoria, s_db_limite, s_db_jogada; 
-    wire s_db_tem_jogada; // CORRIGIDO: Agora tem 1 bit!
+    wire s_db_tem_jogada; 
 
-    unidade_controle UC (.clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem)); 
-    fluxo_dados FD (.clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada)); 
+    unidade_controle UC ( 
+        .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), 
+        .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
+        .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
+        .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
+        .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), 
+        .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem) 
+    ); 
+
+    fluxo_dados FD ( 
+        .clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), 
+        .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), 
+        .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), 
+        .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), 
+        .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), 
+        .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), 
+        .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), 
+        .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada) 
+    ); 
 
     localparam ST_ESPERA_JOGADA = 4'b0010; 
     localparam ST_REGISTRA_NOVA = 4'b1000; 
@@ -44,19 +62,21 @@ module circuito_exp6_tb4_4;
     reg [3:0] nova_jogada; 
 
     initial begin 
-        $dumpfile("jogo_tb4_config_4.vcd"); 
-        $dumpvars(0, circuito_exp6_tb4_4); 
+        $dumpfile("jogo_tb4_config.vcd"); 
+        $dumpvars(0, circuito_exp6_tb4); 
 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        configuracao = 2'b01; // Inicia em 4 rodadas
+        configuracao = 2'b01; // Modo Demo 4 rodadas (Inicial)
+
         #2 reset = 0; #2 jogar = 1; #2 jogar = 0;  
 
         nova_jogada = 4'b0001; 
 
+        // Roda o loop para apenas 4 rodadas, pois a config limitou
         for (i = 0; i < 4; i = i + 1) begin 
-            if (i == 1) begin
+            if (i == 2) begin
                 $display("Modificando configuracao externa para 16 rodadas no meio...");
-                configuracao = 2'b00; 
+                configuracao = 2'b00;
             end
 
             for (j = 0; j <= i; j = j + 1) begin 
@@ -74,7 +94,7 @@ module circuito_exp6_tb4_4;
 
         espera_estado(4'b1111, 20000); 
         wait(ganhou == 1); 
-        $display("SUCESSO: Mudanca de config ignorada."); 
+        $display("SUCESSO: Jogo ignorou mudanca externa e venceu na 4a rodada!"); 
         #200; $finish; 
     end 
 endmodule
