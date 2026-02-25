@@ -67,7 +67,9 @@ module unidade_controle (
       registra:      Eprox = comparacao;
       comparacao:    Eprox = (!igual) ? fim_erro : (fim_seq ? ultima_jogada : proximo);
       ultima_jogada: Eprox = fim ? fim_acerto : registra_nova;
-      registra_nova: Eprox = jogada ? grava_nova : registra_nova;
+      // Timeout tambem deve valer quando o jogador precisa adicionar
+      // a nova jogada da rodada.
+      registra_nova: Eprox = timeout ? fim_erro : (jogada ? grava_nova : registra_nova);
       grava_nova:    Eprox = inicia_seq;
       proximo:       Eprox = espera_jogada;
       fim_erro:      Eprox = iniciar ? inicializa_el : fim_erro;
@@ -92,9 +94,12 @@ module unidade_controle (
     errou = (Eatual == fim_erro) ? 1'b1 : 1'b0;
     zeraE = (Eatual == inicia_seq) ? 1'b1 : 1'b0;
     contaL = (Eatual == ultima_jogada) ? 1'b1 : 1'b0;
-    // NOVO: controla timer (zera ao iniciar espera, conta enquanto espera)
-    zeraTMR = (Eatual == inicia_seq) ? 1'b1 : 1'b0;
-    contaTMR = ((Eatual == espera_jogada) && configuracaoR[1]) ? 1'b1 : 1'b0; //alterei por seguranca, vai que o conta causa um bug memso com o reset ativo
+    // Controla timer:
+    // - reseta ao iniciar a espera de repeticao (inicia_seq)
+    // - reseta ao entrar na espera da nova jogada (ultima_jogada -> registra_nova)
+    // - conta em ambos os estados de espera por jogada
+    zeraTMR = (Eatual == inicia_seq || Eatual == ultima_jogada) ? 1'b1 : 1'b0;
+    contaTMR = ((Eatual == espera_jogada || Eatual == registra_nova) && configuracaoR[1]) ? 1'b1 : 1'b0;
     //NOVOS : controle da ram
     escreveMem = (Eatual == grava_nova) ? 1'b1 : 1'b0;
 
