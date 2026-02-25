@@ -6,6 +6,7 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
     reg clock, reset, jogar;
     reg [1:0] configuracao;
     reg [3:0] botoes;
+    reg inicial;
 
     // Sinais de monitoramento
     wire [3:0] leds;
@@ -22,7 +23,7 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
 
     // Instancia da Unidade de Controle (UC)
     unidade_controle UC (
-        .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL),
+        .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), .inicial_sel(inicial),
         .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao),
         .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE),
         .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR),
@@ -44,6 +45,7 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
 
     localparam ST_ESPERA_JOGADA = 4'b0010;
     localparam ST_REGISTRA_NOVA = 4'b1000;
+    localparam ST_ESPERA_INICIAL = 4'b1010;
 
     always #0.5 clock = ~clock; // Clock de 1kHz
 
@@ -77,12 +79,26 @@ module circuito_exp6_tb1; // Nome solicitado pelo usuario
     initial begin
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000;
         configuracao = 2'b00; // Modo normal 16 rodadas
-
+        inicial = 1'b1;
+        
         #2 reset = 0;
         #2 jogar = 1; #2 jogar = 0; 
 
-        // Nova jogada em padrao ciclico: vermelho, azul, amarelo, verde
-        nova_jogada = 4'b0001;
+        if (inicial) begin
+            $display("Modo Desafio: Aguardando a jogada inicial semente...");
+            // Espera a FSM atingir o estado "espera_inicial"
+            espera_estado(ST_ESPERA_INICIAL, 15000); 
+            
+            // Simula o jogador inserindo a jogada inicial (ex: botão 0001)
+            apertar_botao(4'b0001); 
+            $display("Jogada inicial registrada!");
+            
+            // A próxima cor a ser inserida na primeira rodada precisa ser diferente
+            nova_jogada = 4'b0010;  
+        end else begin
+            // Se o desafio estiver desligado, a lógica continua igual a original
+            nova_jogada = 4'b0001;
+        end
 
         for (i = 0; i < 16; i = i + 1) begin
             $display("Iniciando Rodada %0d...", i + 1);

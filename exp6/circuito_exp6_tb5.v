@@ -5,6 +5,7 @@ module circuito_exp6_tb5;
     reg clock, reset, jogar; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
+    reg inicial; // NOVO
 
     wire [3:0] leds; 
     wire ganhou, perdeu, pronto; 
@@ -19,6 +20,7 @@ module circuito_exp6_tb5;
 
     unidade_controle UC ( 
         .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), 
+        .inicial_sel(inicial), // NOVO
         .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
         .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
         .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
@@ -39,8 +41,15 @@ module circuito_exp6_tb5;
 
     localparam ST_ESPERA_JOGADA = 4'b0010; 
     localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_INICIAL = 4'b1010; // NOVO
 
     always #0.5 clock = ~clock; 
+
+    task apertar_botao(input [3:0] valor); 
+    begin 
+        botoes = valor; #10; botoes = 4'b0000; #20; 
+    end 
+    endtask
 
     task espera_estado(input [3:0] estado, input integer limite_ms); 
         integer t; 
@@ -49,10 +58,8 @@ module circuito_exp6_tb5;
         while ((db_estado !== estado) && (t < limite_ms)) begin 
             #1; t = t + 1; 
         end 
-        // Trava de seguranca para evitar travamento do terminal
         if (db_estado !== estado) begin
             $display("ERRO TB: O estado %b nao foi atingido no tempo limite.", estado);
-            $display("Verifique o contador de timeout no seu Fluxo de Dados.");
             $finish;
         end
     end 
@@ -60,20 +67,25 @@ module circuito_exp6_tb5;
 
     initial begin 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        // Configuração 10: Jogadas com timeout e modo normal com 16 rodadas
-        configuracao = 2'b10; 
+        configuracao = 2'b10; // 16 rodadas COM timeout
+        inicial = 1'b1; // NOVO
 
         #2 reset = 0; 
         #2 jogar = 1; #2 jogar = 0;  
 
+        // NOVO: Tratamento do Desafio ANTES de esperar a jogada normal
+        if (inicial) begin
+            $display("Modo Desafio: Aguardando a jogada inicial semente...");
+            espera_estado(ST_ESPERA_INICIAL, 15000); 
+            apertar_botao(4'b0001); 
+            $display("Jogada inicial registrada. O jogo vai comecar.");
+        end
+
         espera_estado(ST_ESPERA_JOGADA, 15000); 
         $display("Aguardando timeout de 5 segundos...");
 
-        // Espera ate 6000ms pela transicao para o estado de erro (4'b1110)
-        // Se o hardware nao gerar o timeout, o testbench encerra com erro aqui.
-        espera_estado(4'b1110, 6000); 
+        espera_estado(4'b1110, 6000); // 4'b1110 = fim_erro
 
-        // Substitui o wait infinito por um if seguro
         if (perdeu == 1) begin
             $display("SUCESSO: Perda por inatividade detectada corretamente."); 
         end else begin

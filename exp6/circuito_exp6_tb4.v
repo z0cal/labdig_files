@@ -5,6 +5,7 @@ module circuito_exp6_tb4;
     reg clock, reset, jogar; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
+    reg inicial; // NOVO
 
     wire [3:0] leds; 
     wire ganhou, perdeu, pronto; 
@@ -19,6 +20,7 @@ module circuito_exp6_tb4;
 
     unidade_controle UC ( 
         .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), 
+        .inicial_sel(inicial), // NOVO
         .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
         .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
         .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
@@ -39,6 +41,7 @@ module circuito_exp6_tb4;
 
     localparam ST_ESPERA_JOGADA = 4'b0010; 
     localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_INICIAL = 4'b1010; // NOVO
 
     always #0.5 clock = ~clock; 
 
@@ -63,23 +66,27 @@ module circuito_exp6_tb4;
 
     initial begin 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        configuracao = 2'b00; // Garante inicio em 16 rodadas
+        configuracao = 2'b00; 
+        inicial = 1'b1; // NOVO
 
         #2 reset = 0; 
         #2 jogar = 1; 
         #2 jogar = 0;  
 
-        nova_jogada = 4'b0001; 
+        // NOVO: Tratamento do Desafio
+        if (inicial) begin
+            espera_estado(ST_ESPERA_INICIAL, 15000); 
+            apertar_botao(4'b0001); 
+            nova_jogada = 4'b0010;  
+        end else begin
+            nova_jogada = 4'b0001;
+        end
 
-        // Roda o loop para 16 rodadas
         for (i = 0; i < 16; i = i + 1) begin 
-            // A mudança ocorre APOS as rodadas 0 e 1, ou seja, no inicio da rodada 2 (terceira rodada global)
             if (i == 2) begin
                 $display("Tempo %0t: Modificando configuracao externa para 4 rodadas...", $time);
                 configuracao = 2'b01;
             end
-
-            $display("Iniciando Rodada %0d (Config atual: %b)", i+1, configuracao);
 
             for (j = 0; j <= i; j = j + 1) begin 
                 espera_estado(ST_ESPERA_JOGADA, 15000); 

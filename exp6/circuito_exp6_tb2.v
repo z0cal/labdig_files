@@ -5,6 +5,7 @@ module circuito_exp6_tb2;
     reg clock, reset, jogar; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
+    reg inicial;
 
     wire [3:0] leds; 
     wire ganhou, perdeu, pronto; 
@@ -18,7 +19,7 @@ module circuito_exp6_tb2;
     wire s_db_tem_jogada; 
 
     unidade_controle UC ( 
-        .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), 
+        .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), .inicial_sel(inicial),
         .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
         .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
         .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
@@ -39,6 +40,7 @@ module circuito_exp6_tb2;
 
     localparam ST_ESPERA_JOGADA = 4'b0010; 
     localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_INICIAL = 4'b1010;
 
     always #0.5 clock = ~clock; 
 
@@ -65,17 +67,25 @@ module circuito_exp6_tb2;
     reg [3:0] nova_jogada; 
 
     initial begin 
-        $dumpfile("jogo_tb2_erro5.vcd"); 
-        $dumpvars(0, circuito_exp6_tb2); 
 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b00; 
         jogadas_globais = 0;
-        nova_jogada = 4'b0001; 
+        nova_jogada = 4'b0001;
+        inicial = 1'b1; 
 
         #2 reset = 0; 
         #2 jogar = 1; #2 jogar = 0;  
 
+        if (inicial) begin
+            $display("Modo Desafio: Aguardando a jogada inicial semente...");
+            espera_estado(ST_ESPERA_INICIAL, 15000); 
+            apertar_botao(4'b0001); 
+            $display("Jogada inicial registrada!");
+            nova_jogada = 4'b0010;  
+        end else begin
+            nova_jogada = 4'b0001;
+        end
         for (i = 0; i < 16; i = i + 1) begin 
             for (j = 0; j <= i; j = j + 1) begin 
                 espera_estado(ST_ESPERA_JOGADA, 15000); 

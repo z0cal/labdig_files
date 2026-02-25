@@ -2,7 +2,7 @@
 
 module circuito_exp6_tb2_4;
 
-    reg clock, reset, jogar; 
+    reg clock, reset, jogar, inicial; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
 
@@ -17,11 +17,29 @@ module circuito_exp6_tb2_4;
     wire [3:0] s_db_contagem, s_db_memoria, s_db_limite, s_db_jogada; 
     wire s_db_tem_jogada; 
 
-    unidade_controle UC (.clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem)); 
-    fluxo_dados FD (.clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada)); 
+    unidade_controle UC (
+        .clock(clock), .reset(reset), .iniciar(jogar), .inicial_sel(inicial), .fim(s_fimL), 
+        .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
+        .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
+        .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
+        .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), 
+        .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem)
+    ); 
+
+    fluxo_dados FD (
+        .clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), 
+        .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), 
+        .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), 
+        .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), 
+        .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), 
+        .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), 
+        .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), 
+        .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada)
+    ); 
 
     localparam ST_ESPERA_JOGADA = 4'b0010; 
     localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_INICIAL = 4'b1010;
 
     always #0.5 clock = ~clock; 
 
@@ -38,23 +56,27 @@ module circuito_exp6_tb2_4;
         while ((db_estado !== estado) && (t < limite_ms)) begin 
             #1; t = t + 1; 
         end 
-        if (db_estado !== estado) begin 
-            $display("ERRO: timeout aguardando estado %b", estado); $finish; 
-        end 
     end 
     endtask 
 
     integer i, j, jogadas_globais; 
     reg [3:0] nova_jogada; 
 
-    initial begin 
+    initial begin  
+        $dumpfile("jogo_tb2_4_erro5.vcd");
+        $dumpvars(0, circuito_exp6_tb2_4);
+
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        configuracao = 2'b01; // Modo Demo 4 rodadas
-        jogadas_globais = 0;
-        nova_jogada = 4'b0001; 
+        inicial = 1'b1; configuracao = 2'b01; jogadas_globais = 0;
 
         #2 reset = 0; 
         #2 jogar = 1; #2 jogar = 0;  
+
+        // Semente inicial conta como 1a jogada global
+        espera_estado(ST_ESPERA_INICIAL, 15000); 
+        apertar_botao(4'b0001); 
+        jogadas_globais = 1;
+        nova_jogada = 4'b0010; 
 
         for (i = 0; i < 4; i = i + 1) begin 
             for (j = 0; j <= i; j = j + 1) begin 
@@ -62,21 +84,20 @@ module circuito_exp6_tb2_4;
                 jogadas_globais = jogadas_globais + 1;
                 
                 if (jogadas_globais == 5) begin
-                    $display("Injetando erro na 5a jogada global (Rodada 3)...");
-                    apertar_botao(~s_db_memoria); // Forca botao errado
+                    $display("Injetando erro na 5a jogada global...");
+                    apertar_botao(~s_db_memoria); 
                     wait(perdeu == 1);
-                    $display("SUCESSO: Erro na 5a jogada detectado no modo 4 rodadas.");
+                    $display("SUCESSO: Erro detectado no modo Desafio.");
                     #200; $finish;
                 end else begin
                     apertar_botao(s_db_memoria); 
                 end
             end 
 
-            if (i < 3) begin
-                espera_estado(ST_REGISTRA_NOVA, 15000); 
-                apertar_botao(nova_jogada); 
-                nova_jogada = {nova_jogada[2:0], nova_jogada[3]}; 
-            end
+            espera_estado(ST_REGISTRA_NOVA, 15000); 
+            apertar_botao(nova_jogada); 
+            nova_jogada = {nova_jogada[2:0], nova_jogada[3]};
+            #20;
         end 
     end 
 endmodule

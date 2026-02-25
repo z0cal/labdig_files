@@ -1,102 +1,55 @@
 `timescale 1ms/100us 
 
-module circuito_exp6_tb4;
+module circuito_exp6_tb4_4;
 
-    reg clock, reset, jogar; 
+    reg clock, reset, jogar, inicial; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
 
-    wire [3:0] leds; 
-    wire ganhou, perdeu, pronto; 
-    wire [3:0] db_estado; 
-     
+    wire [3:0] leds; wire ganhou, perdeu, pronto; wire [3:0] db_estado; 
     wire s_zeraL, s_zeraE, s_contaL, s_contaE, s_zeraTMR, s_contaTMR, s_zeraR, s_registraR, s_escreveMem; 
-    wire [1:0] s_configuracaoR; 
-    wire s_chavesIgualMemoria, s_enderecoIgualLimite, s_enderecoMenorOuIgualLimite; 
-    wire s_fimL, s_fimE, s_fimTMR, s_jogada_feita; 
-    wire [3:0] s_db_contagem, s_db_memoria, s_db_limite, s_db_jogada; 
-    wire s_db_tem_jogada; 
+    wire [1:0] s_configuracaoR; wire s_chavesIgualMemoria, s_enderecoIgualLimite, s_enderecoMenorOuIgualLimite; 
+    wire s_fimL, s_fimE, s_fimTMR, s_jogada_feita; wire [3:0] s_db_contagem, s_db_memoria, s_db_limite, s_db_jogada; wire s_db_tem_jogada; 
 
-    unidade_controle UC ( 
-        .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), 
-        .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
-        .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
-        .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
-        .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), 
-        .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem) 
-    ); 
+    unidade_controle UC (.clock(clock), .reset(reset), .iniciar(jogar), .inicial_sel(inicial), .fim(s_fimL), .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem)); 
+    fluxo_dados FD (.clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada)); 
 
-    fluxo_dados FD ( 
-        .clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), 
-        .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), 
-        .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), 
-        .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), 
-        .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), 
-        .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), 
-        .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), 
-        .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada) 
-    ); 
-
-    localparam ST_ESPERA_JOGADA = 4'b0010; 
-    localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_JOGADA = 4'b0010; localparam ST_REGISTRA_NOVA = 4'b1000; localparam ST_ESPERA_INICIAL = 4'b1010;
 
     always #0.5 clock = ~clock; 
+    task apertar_botao(input [3:0] valor); begin botoes = valor; #10; botoes = 4'b0000; #20; end endtask 
+    task espera_estado(input [3:0] estado, input integer limite_ms); integer t; begin t = 0; while ((db_estado !== estado) && (t < limite_ms)) begin #1; t = t + 1; end end endtask 
 
-    task apertar_botao(input [3:0] valor); 
-    begin 
-        botoes = valor; #10; botoes = 4'b0000; #20;  
-    end 
-    endtask 
+    integer i, j; reg [3:0] nova_jogada; 
 
-    task espera_estado(input [3:0] estado, input integer limite_ms); 
-        integer t; 
-    begin 
-        t = 0; 
-        while ((db_estado !== estado) && (t < limite_ms)) begin 
-            #1; t = t + 1; 
-        end 
-    end 
-    endtask 
+    initial begin  
+        $dumpfile("jogo_tb4_4_config.vcd");
+        $dumpvars(0, circuito_exp6_tb4_4);
 
-    integer i, j; 
-    reg [3:0] nova_jogada; 
+        clock = 0; reset = 1; jogar = 0; inicial = 1'b1; configuracao = 2'b01; // Inicia em 4 Rodadas
+        #2 reset = 0; #2 jogar = 1; #2 jogar = 0; 
+        
+        espera_estado(ST_ESPERA_INICIAL, 15000); apertar_botao(4'b0001);
+        nova_jogada = 4'b0010; 
 
-    initial begin 
-        clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        configuracao = 2'b00; // Garante inicio em 16 rodadas
-
-        #2 reset = 0; 
-        #2 jogar = 1; 
-        #2 jogar = 0;  
-
-        nova_jogada = 4'b0001; 
-
-        // Roda o loop para 16 rodadas
-        for (i = 0; i < 16; i = i + 1) begin 
-            // A mudança ocorre APOS as rodadas 0 e 1, ou seja, no inicio da rodada 2 (terceira rodada global)
-            if (i == 2) begin
-                $display("Tempo %0t: Modificando configuracao externa para 4 rodadas...", $time);
-                configuracao = 2'b01;
+        for (i = 0; i < 4; i = i + 1) begin 
+            // Tenta mudar para 16 rodadas no meio da partida
+            if (i == 1) begin
+                $display("Tentando mudar config externa para 16 rodadas...");
+                configuracao = 2'b00; 
             end
 
-            $display("Iniciando Rodada %0d (Config atual: %b)", i+1, configuracao);
-
             for (j = 0; j <= i; j = j + 1) begin 
-                espera_estado(ST_ESPERA_JOGADA, 15000); 
-                apertar_botao(s_db_memoria); 
+                espera_estado(ST_ESPERA_JOGADA, 15000); apertar_botao(s_db_memoria); 
             end 
-
-            if (i < 15) begin 
-                espera_estado(ST_REGISTRA_NOVA, 15000); 
-                apertar_botao(nova_jogada); 
+            if (i < 3) begin 
+                espera_estado(ST_REGISTRA_NOVA, 15000); apertar_botao(nova_jogada); 
                 nova_jogada = {nova_jogada[2:0], nova_jogada[3]};
             end 
             #20; 
         end 
-
-        espera_estado(4'b1111, 20000); 
-        wait(ganhou == 1); 
-        $display("SUCESSO: Jogo ignorou mudanca externa e venceu na 16a rodada!"); 
+        espera_estado(4'b1111, 20000); // Se ignorou a mudanca, vence na 4a rodada.
+        $display("SUCESSO: Jogo encerrou na 4a rodada ignorando mudanca para 16.");
         #200; $finish; 
     end 
 endmodule

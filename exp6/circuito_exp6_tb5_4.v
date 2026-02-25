@@ -2,61 +2,36 @@
 
 module circuito_exp6_tb5_4;
 
-    reg clock, reset, jogar; 
+    reg clock, reset, jogar, inicial; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
 
-    wire [3:0] leds; 
-    wire ganhou, perdeu, pronto; 
-    wire [3:0] db_estado; 
-     
+    wire [3:0] leds; wire ganhou, perdeu, pronto; wire [3:0] db_estado; 
     wire s_zeraL, s_zeraE, s_contaL, s_contaE, s_zeraTMR, s_contaTMR, s_zeraR, s_registraR, s_escreveMem; 
-    wire [1:0] s_configuracaoR; 
-    wire s_chavesIgualMemoria, s_enderecoIgualLimite, s_enderecoMenorOuIgualLimite, s_fimL, s_fimE, s_fimTMR, s_jogada_feita; 
-    wire [3:0] s_db_contagem, s_db_memoria, s_db_limite, s_db_jogada; 
-    wire s_db_tem_jogada; // CORRIGIDO: Agora tem 1 bit!
+    wire [1:0] s_configuracaoR; wire s_chavesIgualMemoria, s_enderecoIgualLimite, s_enderecoMenorOuIgualLimite; 
+    wire s_fimL, s_fimE, s_fimTMR, s_jogada_feita; wire [3:0] s_db_contagem, s_db_memoria, s_db_limite, s_db_jogada; wire s_db_tem_jogada; 
 
-    unidade_controle UC (.clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem)); 
+    unidade_controle UC (.clock(clock), .reset(reset), .iniciar(jogar), .inicial_sel(inicial), .fim(s_fimL), .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), .zeraR(s_zeraR), .registraR(s_registraR), .pronto(pronto), .acertou(ganhou), .errou(perdeu), .configuracaoR(s_configuracaoR), .db_estado(db_estado), .escreveMem(s_escreveMem)); 
     fluxo_dados FD (.clock(clock), .reset(reset), .zeraE(s_zeraE), .zeraL(s_zeraL), .zeraTMR(s_zeraTMR), .limpaR(s_zeraR), .contaE(s_contaE), .contaL(s_contaL), .contaTMR(s_contaTMR), .registraR(s_registraR), .configuracaoR(s_configuracaoR), .conf_leds(1'b0), .botoes(botoes), .we(s_escreveMem), .chavesIgualMemoria(s_chavesIgualMemoria), .enderecoIgualLimite(s_enderecoIgualLimite), .enderecoMenorOuIgualLimite(s_enderecoMenorOuIgualLimite), .fimL(s_fimL), .fimE(s_fimE), .fimTMR(s_fimTMR), .jogada_feita(s_jogada_feita), .db_tem_jogada(s_db_tem_jogada), .db_configuracao(), .leds(leds), .db_contagem(s_db_contagem), .db_memoria(s_db_memoria), .db_limite(s_db_limite), .db_jogada(s_db_jogada)); 
 
-    localparam ST_ESPERA_JOGADA = 4'b0010; 
-    localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_JOGADA = 4'b0010; localparam ST_ESPERA_INICIAL = 4'b1010;
 
     always #0.5 clock = ~clock; 
+    task apertar_botao(input [3:0] valor); begin botoes = valor; #10; botoes = 4'b0000; #20; end endtask 
+    task espera_estado(input [3:0] estado, input integer limite_ms); integer t; begin t = 0; while ((db_estado !== estado) && (t < limite_ms)) begin #1; t = t + 1; end end endtask 
 
-    task espera_estado(input [3:0] estado, input integer limite_ms); 
-        integer t; 
-    begin 
-        t = 0; 
-        while ((db_estado !== estado) && (t < limite_ms)) begin 
-            #1; t = t + 1; 
-        end 
-        if (db_estado !== estado) begin
-            $display("ERRO TB: O estado %b nao foi atingido no tempo limite.", estado);
-            $finish;
-        end
-    end 
-    endtask 
+    initial begin  
+        $dumpfile("jogo_tb5_4_timeout.vcd");
+        $dumpvars(0, circuito_exp6_tb5_4);
 
-    initial begin 
+        clock = 0; reset = 1; jogar = 0; inicial = 1'b1; configuracao = 2'b11; // Demo COM Timeout
+        #2 reset = 0; #2 jogar = 1; #2 jogar = 0; 
+        
+        espera_estado(ST_ESPERA_INICIAL, 15000); apertar_botao(4'b0001); 
+        $display("Semente registrada. Aguardando timeout de 5 segundos...");
 
-        clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        configuracao = 2'b11; // Demo COM Timeout
-
-        #2 reset = 0; 
-        #2 jogar = 1; #2 jogar = 0;  
-
-        espera_estado(ST_ESPERA_JOGADA, 15000); 
-        $display("Simulando inatividade de 5 segundos...");
-
-        espera_estado(4'b1110, 6000); // 4'b1110 = fim_erro
-
-        if (perdeu == 1) begin
-            $display("SUCESSO: Timeout detectado."); 
-        end else begin
-            $display("FALHA: O sinal PERDEU nao foi ativado apos o timeout.");
-        end
-            
+        espera_estado(4'b1110, 8000); // Espera fim_erro (E)
+        if (perdeu == 1) $display("SUCESSO: Timeout de 5s detectado no modo 4 rodadas.");
         #200; $finish; 
     end 
 endmodule

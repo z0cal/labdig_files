@@ -5,6 +5,7 @@ module circuito_exp6_tb3;
     reg clock, reset, jogar; 
     reg [1:0] configuracao; 
     reg [3:0] botoes; 
+    reg inicial; // NOVO
 
     wire [3:0] leds; 
     wire ganhou, perdeu, pronto; 
@@ -19,6 +20,7 @@ module circuito_exp6_tb3;
 
     unidade_controle UC ( 
         .clock(clock), .reset(reset), .iniciar(jogar), .fim(s_fimL), 
+        .inicial_sel(inicial),
         .igual(s_chavesIgualMemoria), .jogada(s_jogada_feita), .configuracao(configuracao), 
         .fim_seq(s_enderecoIgualLimite), .timeout(s_fimTMR), .zeraL(s_zeraL), .zeraE(s_zeraE), 
         .contaL(s_contaL), .contaE(s_contaE), .zeraTMR(s_zeraTMR), .contaTMR(s_contaTMR), 
@@ -39,6 +41,7 @@ module circuito_exp6_tb3;
 
     localparam ST_ESPERA_JOGADA = 4'b0010; 
     localparam ST_REGISTRA_NOVA = 4'b1000; 
+    localparam ST_ESPERA_INICIAL = 4'b1010; // NOVO
 
     always #0.5 clock = ~clock; 
 
@@ -59,22 +62,29 @@ module circuito_exp6_tb3;
     endtask 
 
     initial begin 
-
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b00; 
+        inicial = 1'b1; // NOVO
 
         #2 reset = 0; #2 jogar = 1; #2 jogar = 0;  
 
         $display("Jogo 1...");
+        // NOVO: Jogada inicial do Jogo 1
+        if (inicial) begin espera_estado(ST_ESPERA_INICIAL, 15000); apertar_botao(4'b0001); end
+
         espera_estado(ST_ESPERA_JOGADA, 15000); apertar_botao(s_db_memoria); 
-        espera_estado(ST_REGISTRA_NOVA, 15000); apertar_botao(4'b0001); 
+        espera_estado(ST_REGISTRA_NOVA, 15000); apertar_botao(4'b0010); 
         espera_estado(ST_ESPERA_JOGADA, 15000); apertar_botao(~s_db_memoria); // Erra na Rodada 2
         wait(perdeu == 1);
         $display("Jogo 1 Perdido. Iniciando Jogo 2 sem RESET...");
         
         #50 jogar = 1; #2 jogar = 0; 
+
+        // NOVO: Jogada inicial do Jogo 2
+        if (inicial) begin espera_estado(ST_ESPERA_INICIAL, 15000); apertar_botao(4'b0100); end
+
         espera_estado(ST_ESPERA_JOGADA, 15000); apertar_botao(s_db_memoria); 
-        espera_estado(ST_REGISTRA_NOVA, 15000); apertar_botao(4'b0010); 
+        espera_estado(ST_REGISTRA_NOVA, 15000); apertar_botao(4'b1000); 
         espera_estado(ST_ESPERA_JOGADA, 15000); apertar_botao(s_db_memoria); // Acerta no jogo 2
         
         $display("SUCESSO: Jogo 2 funcionando. Consecutivo OK.");

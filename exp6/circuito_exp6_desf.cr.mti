@@ -1,37 +1,9 @@
-C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb1.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb1.v
-Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb1
-
-Top level modules:
-	circuito_exp6_tb1
-
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/sync_ram_16x4_file_tb.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/sync_ram_16x4_file_tb.v
+C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/sync_ram_16x4_file_tb.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/sync_ram_16x4_file_tb.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
 -- Compiling module sync_ram_16x4_file_tb
 
 Top level modules:
 	sync_ram_16x4_file_tb
-
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb2.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb2.v
-Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb2
-
-Top level modules:
-	circuito_exp6_tb2
-
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6.v
-Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6
-
-Top level modules:
-	circuito_exp6
-
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb3.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb3.v
-Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb3
-
-Top level modules:
-	circuito_exp6_tb3
 
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/hexa7seg.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/hexa7seg.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
@@ -47,12 +19,19 @@ Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 
 Top level modules:
 	comparador_85
 
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb4.v {1 {vlog -work work -stats=none {C:\Users\Gerenciador\Documents\programming\labdig\labdig_files\exp6\circuito_exp6_tb4.v}
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb4
+-- Compiling module circuito_exp6
 
 Top level modules:
-	circuito_exp6_tb4
+	circuito_exp6
+
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb3.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb3.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb3
+
+Top level modules:
+	circuito_exp6_tb3
 
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/sync_ram_16x4_file.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/sync_ram_16x4_file.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
@@ -61,12 +40,12 @@ Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 
 Top level modules:
 	sync_ram_16x4_file
 
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb5.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb5.v
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb4.v {1 {vlog -work work -stats=none {C:\Users\Gerenciador\Documents\programming\labdig\labdig_files\exp6\circuito_exp6_tb4.v}
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb5
+-- Compiling module circuito_exp6_tb4
 
 Top level modules:
-	circuito_exp6_tb5
+	circuito_exp6_tb4
 
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/estado7seg.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/estado7seg.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
@@ -75,12 +54,26 @@ Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 
 Top level modules:
 	estado7seg
 
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb5.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb5.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb5
+
+Top level modules:
+	circuito_exp6_tb5
+
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/fluxo_dados.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/fluxo_dados.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
 -- Compiling module fluxo_dados
 
 Top level modules:
 	fluxo_dados
+
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_trava_inicial.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_trava_inicial.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb_desafio_trava_inicial
+
+Top level modules:
+	circuito_exp6_tb_desafio_trava_inicial
 
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/registrador_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/registrador_4.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
@@ -89,19 +82,33 @@ Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 
 Top level modules:
 	registrador_4
 
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_inicial0.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_inicial0.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb_desafio_inicial0
+
+Top level modules:
+	circuito_exp6_tb_desafio_inicial0
+
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_timeout_pos_inicial1.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_timeout_pos_inicial1.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb_desafio_timeout_pos_inicial1
+
+Top level modules:
+	circuito_exp6_tb_desafio_timeout_pos_inicial1
+
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_inicial1.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb_desafio_inicial1.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb_desafio_inicial1
+
+Top level modules:
+	circuito_exp6_tb_desafio_inicial1
+
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb1_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb1_4.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
 -- Compiling module circuito_exp6_tb1_4
 
 Top level modules:
 	circuito_exp6_tb1_4
-
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb2_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb2_4.v
-Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb2_4
-
-Top level modules:
-	circuito_exp6_tb2_4
 
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/edge_detector.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/edge_detector.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
@@ -117,6 +124,13 @@ Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 
 Top level modules:
 	contador_m
 
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb2_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb2_4.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb2_4
+
+Top level modules:
+	circuito_exp6_tb2_4
+
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/unidade_controle.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/unidade_controle.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
 -- Compiling module unidade_controle
@@ -131,19 +145,19 @@ Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 
 Top level modules:
 	circuito_exp6_tb3_4
 
-} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb4_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb4_4.v
-Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
--- Compiling module circuito_exp6_tb4
-
-Top level modules:
-	circuito_exp6_tb4
-
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/ledRGB.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/ledRGB.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
 -- Compiling module ledRGB
 
 Top level modules:
 	ledRGB
+
+} {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb4_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb4_4.v
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module circuito_exp6_tb4
+
+Top level modules:
+	circuito_exp6_tb4
 
 } {} {}} C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb5_4.v {1 {vlog -work work -stats=none C:/Users/Gerenciador/Documents/programming/labdig/labdig_files/exp6/circuito_exp6_tb5_4.v
 Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
