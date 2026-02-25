@@ -83,7 +83,10 @@ module unidade_controle (
     zeraL = (Eatual == inicializa_el || Eatual == inicial) ? 1'b1 : 1'b0;
     zeraR = (Eatual == inicial) ? 1'b1 : 1'b0;
     registraR = (Eatual == registra || (Eatual== registra_nova)&&jogada) ? 1'b1 : 1'b0;//registra fica 1 quando tem jogada apenas
-    contaE = (Eatual == proximo) ? 1'b1 : 1'b0;
+    // Avanca endereco durante a repeticao da sequencia (proximo)
+    // e tambem apos a ultima comparacao valida para anexar a nova jogada
+    // no proximo endereco da memoria.
+    contaE = (Eatual == proximo || Eatual == ultima_jogada) ? 1'b1 : 1'b0;
     pronto = ((Eatual == fim_acerto) || (Eatual == fim_erro)) ? 1'b1 : 1'b0;
     acertou = (Eatual == fim_acerto) ? 1'b1 : 1'b0;
     errou = (Eatual == fim_erro) ? 1'b1 : 1'b0;

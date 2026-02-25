@@ -42,11 +42,22 @@ module circuito_exp6 (
     wire [3:0]  s_db_jogada;
     wire [3:0]  s_db_limite;
     wire [3:0]  s_leds;
+    reg         timeout_latched;
 
     assign db_iniciar = jogar;
     assign db_igual   = chavesIgualMemoria;
     assign db_clock   = clock;
-    assign timeout    = fimTMR;
+    assign timeout    = fimTMR | timeout_latched;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset) begin
+            timeout_latched <= 1'b0;
+        end else if (zeraL) begin
+            timeout_latched <= 1'b0;
+        end else if (fimTMR) begin
+            timeout_latched <= 1'b1;
+        end
+    end
 
     unidade_controle u_uc (
         .clock        (clock),
