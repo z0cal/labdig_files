@@ -9,11 +9,12 @@ module ledRGB (
         if (!conf_leds) begin
             rgb = 3'b000; // Apagado quando conf_leds=0
         end else begin
+            // Convencao: rgb = [R,G,B]
             case (codigo)
-                4'b0001: rgb = 3'b010; // Vermelho
-                4'b0010: rgb = 3'b100; // Azul
-                4'b0100: rgb = 3'b011; // Amarelo (vermelho + verde)
-                4'b1000: rgb = 3'b001; // Verde
+                4'b0001: rgb = 3'b100; // Vermelho
+                4'b0010: rgb = 3'b001; // Azul
+                4'b0100: rgb = 3'b110; // Amarelo (vermelho + verde)
+                4'b1000: rgb = 3'b010; // Verde
                 default: rgb = 3'b000; // Apagado
             endcase
         end

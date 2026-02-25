@@ -142,7 +142,8 @@ module circuito_exp6 (
     );
 
     ledRGB rgb (
-         .conf_leds (conf_leds),
+        // Mantem LEDs habilitados para que as jogadas sempre sejam exibidas.
+        .conf_leds (1'b1),
         .codigo    (s_leds),
         .rgb       (db_rgb)
     );
