@@ -2,6 +2,7 @@ module unidade_controle (
     input            clock,
     input            reset,
     input            iniciar,
+    input            inicial_sel,
     input            fim,
     input            igual,
     input            jogada,
@@ -38,10 +39,13 @@ module unidade_controle (
   parameter ultima_jogada = 4'b0111;  // 7 estado novo
   parameter registra_nova = 4'b1000;  // estado para registrar a jogada e dar tempo para estabilizar os sinais de vao ser registraodos
   parameter grava_nova = 4'b1001;  // grava a nova jogada
+  parameter espera_inicial = 4'b1010;  // aguarda jogada inicial quando inicial=1
+  parameter grava_inicial = 4'b1011;  // grava jogada inicial na memoria (endereco 0)
   parameter fim_erro = 4'b1110;  // E
   parameter fim_acerto = 4'b1111;  // F
 
   reg [3:0] Eatual, Eprox;
+  reg       inicialR;
 
 
   always @(posedge clock or posedge reset) begin
@@ -52,15 +56,20 @@ module unidade_controle (
   always @(posedge clock or posedge reset) begin
     if (reset) begin
       configuracaoR <= 2'b00;
-    end else if (iniciar && Eatual == inicial) begin
+      inicialR <= 1'b0;
+    end else if (iniciar && (Eatual == inicial || Eatual == fim_erro || Eatual == fim_acerto)) begin
       configuracaoR <= configuracao;
+      // Entrada desconectada/indefinida (X/Z) e tratada como 0.
+      inicialR <= (inicial_sel === 1'b1);
     end
   end
 
   always @* begin
     case (Eatual)
       inicial:       Eprox = iniciar ? inicializa_el : inicial;
-      inicializa_el: Eprox = inicia_seq;
+      inicializa_el: Eprox = inicialR ? espera_inicial : inicia_seq;
+      espera_inicial: Eprox = jogada ? grava_inicial : espera_inicial;
+      grava_inicial: Eprox = inicia_seq;
       inicia_seq:    Eprox = espera_jogada;
       // NOVO: timeout encerra o jogo mesmo sem jogada
       espera_jogada: Eprox = timeout ? fim_erro : (jogada ? registra : espera_jogada);
@@ -84,7 +93,7 @@ module unidade_controle (
 
     zeraL = (Eatual == inicializa_el || Eatual == inicial) ? 1'b1 : 1'b0;
     zeraR = (Eatual == inicial) ? 1'b1 : 1'b0;
-    registraR = (Eatual == registra || (Eatual== registra_nova)&&jogada) ? 1'b1 : 1'b0;//registra fica 1 quando tem jogada apenas
+    registraR = (Eatual == registra || (Eatual == registra_nova && jogada) || (Eatual == espera_inicial && jogada)) ? 1'b1 : 1'b0;//registra fica 1 quando tem jogada apenas
     // Avanca endereco durante a repeticao da sequencia (proximo)
     // e tambem apos a ultima comparacao valida para anexar a nova jogada
     // no proximo endereco da memoria.
@@ -92,7 +101,9 @@ module unidade_controle (
     pronto = ((Eatual == fim_acerto) || (Eatual == fim_erro)) ? 1'b1 : 1'b0;
     acertou = (Eatual == fim_acerto) ? 1'b1 : 1'b0;
     errou = (Eatual == fim_erro) ? 1'b1 : 1'b0;
-    zeraE = (Eatual == inicia_seq) ? 1'b1 : 1'b0;
+    // Em espera_inicial, zeraE pulsa junto com jogada para garantir escrita
+    // da jogada inicial no endereco 0.
+    zeraE = (Eatual == inicia_seq || (Eatual == espera_inicial && jogada)) ? 1'b1 : 1'b0;
     contaL = (Eatual == ultima_jogada) ? 1'b1 : 1'b0;
     // Controla timer:
     // - reseta ao iniciar a espera de repeticao (inicia_seq)
@@ -101,7 +112,7 @@ module unidade_controle (
     zeraTMR = (Eatual == inicia_seq || Eatual == ultima_jogada) ? 1'b1 : 1'b0;
     contaTMR = ((Eatual == espera_jogada || Eatual == registra_nova) && configuracaoR[1]) ? 1'b1 : 1'b0;
     //NOVOS : controle da ram
-    escreveMem = (Eatual == grava_nova) ? 1'b1 : 1'b0;
+    escreveMem = (Eatual == grava_nova || Eatual == grava_inicial) ? 1'b1 : 1'b0;
 
 
     case (Eatual)
@@ -115,6 +126,8 @@ module unidade_controle (
       ultima_jogada: db_estado = 4'b0111;  // 7
       registra_nova: db_estado = 4'b1000;  // 8
       grava_nova:    db_estado = 4'b1001;  // 9
+      espera_inicial: db_estado = 4'b1010;  // A
+      grava_inicial: db_estado = 4'b1011;  // B
       fim_acerto:    db_estado = 4'b1111;  // F
       fim_erro:      db_estado = 4'b1110;  // E
 

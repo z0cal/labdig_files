@@ -89,12 +89,19 @@ module fluxo_dados (
             end
 
             if (jogada_feita) begin
-                s_led_ativo        <= 1'b1;
-                s_led_from_mem     <= 1'b0;
-                // Exibe a jogada pressionada no instante do pulso.
-                // Usar 's_jogada' aqui pode mostrar o valor anterior,
-                // pois o registrador atualiza no mesmo clock.
-                s_led_codigo       <= botoes;
+                if (zeraE) begin
+                    // Captura da jogada inicial (desafio): a exibicao de 2s
+                    // sera feita em seguida pelo caminho da memoria.
+                    s_led_ativo <= 1'b0;
+                    s_led_from_mem <= 1'b0;
+                end else begin
+                    s_led_ativo        <= 1'b1;
+                    s_led_from_mem     <= 1'b0;
+                    // Exibe a jogada pressionada no instante do pulso.
+                    // Usar 's_jogada' aqui pode mostrar o valor anterior,
+                    // pois o registrador atualiza no mesmo clock.
+                    s_led_codigo       <= botoes;
+                end
                 s_exibe_mem_pendente <= 1'b0;
                 s_exibe_mem_armed  <= 1'b0;
                 s_inicia_exibicao  <= 1'b0;
