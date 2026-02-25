@@ -40,6 +40,7 @@ module fluxo_dados (
         reg          s_led_ativo;
         reg  [3:0]   s_led_codigo;
         reg          s_exibe_mem_pendente;
+        reg          s_exibe_mem_armed;
         reg          s_inicia_exibicao;
 			
 			
@@ -65,28 +66,46 @@ module fluxo_dados (
             s_led_ativo        <= 1'b0;
             s_led_codigo       <= 4'b0000;
             s_exibe_mem_pendente <= 1'b0;
+            s_exibe_mem_armed  <= 1'b0;
             s_inicia_exibicao  <= 1'b0;
         end else if (limpaR) begin
             s_led_ativo        <= 1'b0;
             s_led_codigo       <= 4'b0000;
             s_exibe_mem_pendente <= 1'b0;
+            s_exibe_mem_armed  <= 1'b0;
             s_inicia_exibicao  <= 1'b0;
         end else begin
             s_inicia_exibicao <= 1'b0;
 
             if (zeraE) begin
                 s_exibe_mem_pendente <= 1'b1;
+                s_exibe_mem_armed    <= 1'b0;
+            end
+
+            // Ao fim da repeticao da rodada atual, apaga LED para
+            // iniciar a etapa de "nova jogada" sem cor residual.
+            if (contaL) begin
+                s_led_ativo <= 1'b0;
             end
 
             if (jogada_feita) begin
                 s_led_ativo        <= 1'b1;
-                s_led_codigo       <= s_jogada;
+                // Exibe a jogada pressionada no instante do pulso.
+                // Usar 's_jogada' aqui pode mostrar o valor anterior,
+                // pois o registrador atualiza no mesmo clock.
+                s_led_codigo       <= botoes;
                 s_exibe_mem_pendente <= 1'b0;
+                s_exibe_mem_armed  <= 1'b0;
                 s_inicia_exibicao  <= 1'b1;
-            end else if (s_exibe_mem_pendente) begin
+            end else if (s_exibe_mem_pendente && !s_exibe_mem_armed) begin
+                // RAM sincrona: espera 1 ciclo para o dado do novo endereco
+                // ficar valido antes de exibir a jogada da memoria.
+                s_exibe_mem_armed <= 1'b1;
+            end else if (s_exibe_mem_pendente && s_exibe_mem_armed) begin
                 s_led_ativo        <= 1'b1;
                 s_led_codigo       <= s_dado;
                 s_exibe_mem_pendente <= 1'b0;
+                s_exibe_mem_armed  <= 1'b0;
                 s_inicia_exibicao  <= 1'b1;
             end else if (s_led_ativo && fimLedTMR) begin
                 s_led_ativo <= 1'b0;
