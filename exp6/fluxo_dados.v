@@ -35,7 +35,7 @@ module fluxo_dados (
         wire   [3:0] s_limite;
         wire         s_tem_jogada;
         wire         s_enderecoMenorLimite;
-        wire         reset_cont;
+        wire         fimTMR_raw;
         wire         fimLedTMR;
         reg          s_led_ativo;
         reg  [3:0]   s_led_codigo;
@@ -54,7 +54,7 @@ module fluxo_dados (
         assign fimL          = (configuracaoR[0] == 1'b1 ) ? (s_limite == 4'd3) : (s_limite == 4'd15);// esse tambem 
         assign leds          = s_led_ativo ? s_led_codigo : 4'b0000;
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
-        assign reset_cont = (configuracaoR[1]) ? s_tem_jogada : 1'b1; //implementacao do modo com timer ou nao
+        assign fimTMR = configuracaoR[1] ? fimTMR_raw : 1'b0;
 
     // Exibe a jogada por 2 segundos (clock de 1 kHz -> 2000 ciclos)
     // Eventos de exibicao:
@@ -120,14 +120,15 @@ module fluxo_dados (
         .fim        ( ),
         .meio       ( )
     );
-    //limita a jogada a  5 segundos 
-    contador_m #( .M(5000), .N(12)) ContTMR (
+    // Limita a jogada a 5 segundos.
+    // Reinicia no inicio de cada rodada e a cada jogada reconhecida.
+    contador_m #( .M(5000), .N(13)) ContTMR (
         .clock    ( clock ),
-        .zera_as  ( reset_cont ),
-        .zera_s   ( zeraTMR ),
+        .zera_as  ( reset ),
+        .zera_s   ( zeraTMR | jogada_feita ),
         .conta    ( contaTMR ),
         .Q        ( ),
-        .fim      ( fimTMR ),
+        .fim      ( fimTMR_raw ),
         .meio     ( )
     );
 

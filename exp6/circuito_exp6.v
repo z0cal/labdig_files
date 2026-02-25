@@ -131,7 +131,7 @@ module circuito_exp6 (
     );
 
     ledRGB rgb (
-        .conf_leds (conf_leds),
+         .conf_leds (conf_leds),
         .codigo    (s_leds),
         .rgb       (db_rgb)
     );
