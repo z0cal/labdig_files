@@ -38,6 +38,7 @@ module fluxo_dados (
         wire         fimTMR_raw;
         wire         fimLedTMR;
         reg          s_led_ativo;
+        reg          s_led_from_mem;
         reg  [3:0]   s_led_codigo;
         reg          s_exibe_mem_pendente;
         reg          s_exibe_mem_armed;
@@ -57,19 +58,23 @@ module fluxo_dados (
         assign enderecoMenorOuIgualLimite = s_enderecoMenorLimite | enderecoIgualLimite;
         assign fimTMR = configuracaoR[1] ? fimTMR_raw : 1'b0;
 
-    // Exibe a jogada por 2 segundos (clock de 1 kHz -> 2000 ciclos)
+    // Exibicao de LEDs:
+    // - primeira jogada da memoria (inicio do jogo): fica acesa por 2s e apaga
+    // - jogada do jogador: permanece acesa ate uma nova jogada
     // Eventos de exibicao:
     // - inicio de rodada: mostra a jogada atual da memoria (s_dado)
-    // - jogada do jogador: mostra a jogada capturada (s_jogada)
+    // - jogada do jogador: mostra a jogada pressionada (botoes)
     always @(posedge clock or posedge reset) begin
         if (reset) begin
             s_led_ativo        <= 1'b0;
+            s_led_from_mem     <= 1'b0;
             s_led_codigo       <= 4'b0000;
             s_exibe_mem_pendente <= 1'b0;
             s_exibe_mem_armed  <= 1'b0;
             s_inicia_exibicao  <= 1'b0;
         end else if (limpaR) begin
             s_led_ativo        <= 1'b0;
+            s_led_from_mem     <= 1'b0;
             s_led_codigo       <= 4'b0000;
             s_exibe_mem_pendente <= 1'b0;
             s_exibe_mem_armed  <= 1'b0;
@@ -77,38 +82,36 @@ module fluxo_dados (
         end else begin
             s_inicia_exibicao <= 1'b0;
 
-            if (zeraE) begin
+            // Exibe a jogada da RAM apenas no inicio do jogo (primeira rodada).
+            if (zeraE && (s_limite == 4'd0)) begin
                 s_exibe_mem_pendente <= 1'b1;
                 s_exibe_mem_armed    <= 1'b0;
             end
 
-            // Ao fim da repeticao da rodada atual, apaga LED para
-            // iniciar a etapa de "nova jogada" sem cor residual.
-            if (contaL) begin
-                s_led_ativo <= 1'b0;
-            end
-
             if (jogada_feita) begin
                 s_led_ativo        <= 1'b1;
+                s_led_from_mem     <= 1'b0;
                 // Exibe a jogada pressionada no instante do pulso.
                 // Usar 's_jogada' aqui pode mostrar o valor anterior,
                 // pois o registrador atualiza no mesmo clock.
                 s_led_codigo       <= botoes;
                 s_exibe_mem_pendente <= 1'b0;
                 s_exibe_mem_armed  <= 1'b0;
-                s_inicia_exibicao  <= 1'b1;
+                s_inicia_exibicao  <= 1'b0;
             end else if (s_exibe_mem_pendente && !s_exibe_mem_armed) begin
                 // RAM sincrona: espera 1 ciclo para o dado do novo endereco
                 // ficar valido antes de exibir a jogada da memoria.
                 s_exibe_mem_armed <= 1'b1;
             end else if (s_exibe_mem_pendente && s_exibe_mem_armed) begin
                 s_led_ativo        <= 1'b1;
+                s_led_from_mem     <= 1'b1;
                 s_led_codigo       <= s_dado;
                 s_exibe_mem_pendente <= 1'b0;
                 s_exibe_mem_armed  <= 1'b0;
                 s_inicia_exibicao  <= 1'b1;
-            end else if (s_led_ativo && fimLedTMR) begin
+            end else if (s_led_ativo && s_led_from_mem && fimLedTMR) begin
                 s_led_ativo <= 1'b0;
+                s_led_from_mem <= 1'b0;
             end
         end
     end
@@ -151,12 +154,12 @@ module fluxo_dados (
         .meio     ( )
     );
 
-    // temporizador da exibicao dos LEDs (2 segundos)
+    // temporizador da exibicao de jogada da memoria (2 segundos)
     contador_m #( .M(2000), .N(11)) ContLED (
         .clock      ( clock ),
         .zera_as    ( reset | limpaR ),
         .zera_s     ( s_inicia_exibicao ),
-        .conta      ( s_led_ativo ),
+        .conta      ( s_led_ativo & s_led_from_mem ),
         .Q          ( ),
         .fim        ( fimLedTMR ),
         .meio       ( )
