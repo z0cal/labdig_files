@@ -59,9 +59,6 @@ module circuito_exp6_tb5;
     endtask 
 
     initial begin 
-        $dumpfile("jogo_tb5_timeout.vcd"); 
-        $dumpvars(0, circuito_exp6_tb5); 
-
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         // Configuração 10: Jogadas com timeout e modo normal com 16 rodadas
         configuracao = 2'b10; 

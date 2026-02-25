@@ -59,8 +59,6 @@ module circuito_exp6_tb3;
     endtask 
 
     initial begin 
-        $dumpfile("jogo_tb3_consecutivo.vcd"); 
-        $dumpvars(0, circuito_exp6_tb3); 
 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b00; 

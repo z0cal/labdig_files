@@ -39,8 +39,6 @@ module circuito_exp6_tb5_4;
     endtask 
 
     initial begin 
-        $dumpfile("jogo_tb5_timeout_4.vcd"); 
-        $dumpvars(0, circuito_exp6_tb5_4); 
 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b11; // Demo COM Timeout

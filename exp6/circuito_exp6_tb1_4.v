@@ -48,9 +48,7 @@ module circuito_exp6_tb1_4;
     integer i, j; 
     reg [3:0] nova_jogada; 
 
-    initial begin 
-        $dumpfile("jogo_tb1_vence4_4.vcd"); 
-        $dumpvars(0, circuito_exp6_tb1_4); 
+    initial begin  
 
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b01; // Modo Demo 4 rodadas (SEM timeout)

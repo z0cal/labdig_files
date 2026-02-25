@@ -44,9 +44,6 @@ module circuito_exp6_tb3_4;
     reg [3:0] nova_jogada;
 
     initial begin 
-        $dumpfile("jogo_tb3_consecutivo_4.vcd"); 
-        $dumpvars(0, circuito_exp6_tb3_4); 
-
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b01; 
 

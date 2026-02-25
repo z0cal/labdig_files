@@ -62,29 +62,31 @@ module circuito_exp6_tb4;
     reg [3:0] nova_jogada; 
 
     initial begin 
-        $dumpfile("jogo_tb4_config.vcd"); 
-        $dumpvars(0, circuito_exp6_tb4); 
-
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
-        configuracao = 2'b01; // Modo Demo 4 rodadas (Inicial)
+        configuracao = 2'b00; // Garante inicio em 16 rodadas
 
-        #2 reset = 0; #2 jogar = 1; #2 jogar = 0;  
+        #2 reset = 0; 
+        #2 jogar = 1; 
+        #2 jogar = 0;  
 
         nova_jogada = 4'b0001; 
 
-        // Roda o loop para apenas 4 rodadas, pois a config limitou
-        for (i = 0; i < 4; i = i + 1) begin 
+        // Roda o loop para 16 rodadas
+        for (i = 0; i < 16; i = i + 1) begin 
+            // A mudança ocorre APOS as rodadas 0 e 1, ou seja, no inicio da rodada 2 (terceira rodada global)
             if (i == 2) begin
-                $display("Modificando configuracao externa para 16 rodadas no meio...");
-                configuracao = 2'b00;
+                $display("Tempo %0t: Modificando configuracao externa para 4 rodadas...", $time);
+                configuracao = 2'b01;
             end
+
+            $display("Iniciando Rodada %0d (Config atual: %b)", i+1, configuracao);
 
             for (j = 0; j <= i; j = j + 1) begin 
                 espera_estado(ST_ESPERA_JOGADA, 15000); 
                 apertar_botao(s_db_memoria); 
             end 
 
-            if (i < 3) begin 
+            if (i < 15) begin 
                 espera_estado(ST_REGISTRA_NOVA, 15000); 
                 apertar_botao(nova_jogada); 
                 nova_jogada = {nova_jogada[2:0], nova_jogada[3]};
@@ -94,7 +96,7 @@ module circuito_exp6_tb4;
 
         espera_estado(4'b1111, 20000); 
         wait(ganhou == 1); 
-        $display("SUCESSO: Jogo ignorou mudanca externa e venceu na 4a rodada!"); 
+        $display("SUCESSO: Jogo ignorou mudanca externa e venceu na 16a rodada!"); 
         #200; $finish; 
     end 
 endmodule
