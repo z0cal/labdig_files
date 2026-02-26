@@ -65,9 +65,6 @@ module circuito_exp6_tb2;
     reg [3:0] nova_jogada; 
 
     initial begin 
-        $dumpfile("jogo_tb2_erro5.vcd"); 
-        $dumpvars(0, circuito_exp6_tb2); 
-
         clock = 0; reset = 1; jogar = 0; botoes = 4'b0000; 
         configuracao = 2'b00; 
         jogadas_globais = 0;
