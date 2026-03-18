@@ -5,9 +5,9 @@ module fluxo_dados (
     // Sinais de controle vindos da UC para gerenciar a jogada
     input limpaR,              
     input registraR,           
-    input zera_timer,        
-    input conta_timer,         
-    input [3:0] db_estado, 
+    input zera_timer,          // NOVO: Para resetar o timer
+    input conta_timer,         // NOVO: Para habilitar a contagem
+    input [3:0] db_estado,     // NOVO: Para saber se esta no COUNTDOWN
     
     // Entradas fisicas
     input [4:0] botoes_raw,    // [4] = Start/Pause, [3:0] = Botoes do jogo
@@ -37,14 +37,14 @@ module fluxo_dados (
         .pulso(jogada_feita)
     );
 
-    // Temporizador de 3 segundos para o countdown
+    // Temporizador de 3 segundos para o countdown (1kHz = 3000 contagens)
     contador_m #(.M(3000), .N(12)) timer_countdown (
         .clock   (clock),
         .zera_as (reset),
         .zera_s  (zera_timer),
         // Conta apenas quando a UC autoriza e estamos no estado COUNTDOWN (0001)
         .conta   (conta_timer && (db_estado == 4'b0001)),
-        .Q       (),             
+        .Q       (),             // Valor de Q não é exportado nesta fase
         .fim     (fim_contagem), // Gera o sinal que faz a UC pular para PLAY
         .meio    ()
     );
@@ -67,7 +67,6 @@ module fluxo_dados (
     );
 
     // Sinais temporarios
-    assign fim_tempo = 1'b0;    
-    assign perdeu = 1'b0; 
-
+	assign fim_tempo = botoes_raw[0] & botoes_raw[1]; 
+	assign perdeu    = botoes_raw[2] & botoes_raw[3];
 endmodule

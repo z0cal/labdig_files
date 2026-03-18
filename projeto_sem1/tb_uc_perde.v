@@ -37,7 +37,6 @@ module tb_uc_perde;
         // Testar registro de jogada no estado PLAY
         $display("Estado PLAY. Simulando acerto de nota...");
         jogada = 1; #20; jogada = 0; #20; 
-        // Verifique no waveform se registraR pulsa em 1 aqui!
 
         // Pausa e retorno
         start = 1; #20; start = 0; #20; #40; // -> PAUSE 

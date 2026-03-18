@@ -9,7 +9,7 @@ module tb_uc_ganha;
     unidade_controle uut (
         .clock(clock),
         .reset(reset),
-        .start(start), 
+        .start(start), // Ajustado para coincidir com o port do módulo
         .jogada(jogada), 
         .fim_contagem(fim_contagem),
         .fim_tempo(fim_tempo),
@@ -37,6 +37,7 @@ module tb_uc_ganha;
         // Testar registro de jogada no estado PLAY
         $display("Estado PLAY. Simulando acerto de nota...");
         jogada = 1; #20; jogada = 0; #20; 
+        // Verifique no waveform se registraR pulsa em 1 aqui!
 
         // Pausa e retorno
         start = 1; #20; start = 0; #20; #40; // -> PAUSE 

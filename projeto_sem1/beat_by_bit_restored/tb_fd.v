@@ -46,8 +46,10 @@ module tb_fd;
         .db_estado(db_estado)      
     );
 
+    // Gerador de Clock (1kHz = T de 1ms. Como a escala base é 1ms, #0.5 faz um pulso de 0.5ms)
     always #0.5 clock = ~clock;
 
+    // Procedimento de Teste
     initial begin
         $display("Iniciando Simulacao...");
         clock = 0; reset = 1; botoes_raw = 0;
@@ -61,7 +63,7 @@ module tb_fd;
         // O estado muda para COUNTDOWN
 
         $display("Aguardando os 3 segundos do COUNTDOWN...");
-        #3005; // Aguarda mais de 3 s para o contador terminar
+        #3005; // Aguarda mais de 3000 ms (3 segundos reais) para o contador terminar
 
         // Passo 2: Simular Jogada (Botão 1)
         $display("Apertando Botao 1 (Gameplay) no estado PLAY...");
