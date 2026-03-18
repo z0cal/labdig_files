@@ -13,7 +13,7 @@ module beat_by_bit (
     wire s_zera_timer, s_conta_timer; // Fios adicionados para o timer
     wire [3:0] s_estado, s_valor_jogada;
 
-    assign leds_pulsos = {s_start_pulso, 3'b000, s_jogada_feita};
+    assign leds_pulsos = {s_start_pulso, s_fim_contagem, s_fim_tempo, s_perdeu, s_jogada_feita};
 
     unidade_controle u_uc (
         .clock(clock),

@@ -67,7 +67,7 @@ module fluxo_dados (
     );
 
     // Sinais temporarios
-    assign fim_tempo = 1'b0;    
-    assign perdeu = 1'b0; 
+	assign fim_tempo = botoes_raw[0] & botoes_raw[1]; 
+	assign perdeu    = botoes_raw[2] & botoes_raw[3];
 
 endmodule
