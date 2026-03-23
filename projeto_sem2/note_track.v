@@ -99,7 +99,7 @@ module note_track (
                             valid[i]     <= 0;
                             escape_pulse <= 1;
                         end else begin
-                            ages[i] <= ages[i] + 1;
+                            ages[i] <= ages[i] + 8'd1;
                         end
                     end
                 end

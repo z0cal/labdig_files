@@ -211,7 +211,9 @@ module fluxo_dados (
     reg [15:0] score_reg;
 
     always @(posedge clock or posedge reset) begin
-        if (reset || limpaR) begin
+        if (reset) begin
+            score_reg <= 16'd0;
+        end else if (limpaR) begin
             score_reg <= 16'd0;
         end else if (any_hit) begin
             score_reg <= score_reg + 16'd100;
@@ -228,7 +230,9 @@ module fluxo_dados (
     reg [7:0] miss_reg;
 
     always @(posedge clock or posedge reset) begin
-        if (reset || limpaR) begin
+        if (reset) begin
+            miss_reg <= 8'd0;
+        end else if (limpaR) begin
             miss_reg <= 8'd0;
         end else if (any_escape && game_active) begin
             miss_reg <= miss_reg + 8'd1;
@@ -244,7 +248,9 @@ module fluxo_dados (
     reg [7:0] combo_reg;
 
     always @(posedge clock or posedge reset) begin
-        if (reset || limpaR) begin
+        if (reset) begin
+            combo_reg <= 8'd0;
+        end else if (limpaR) begin
             combo_reg <= 8'd0;
         end else if (any_hit) begin
             combo_reg <= (combo_reg < 8'd255) ? combo_reg + 8'd1 : 8'd255;

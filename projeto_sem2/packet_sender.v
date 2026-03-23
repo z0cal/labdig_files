@@ -117,7 +117,7 @@ module packet_sender (
                         if (byte_idx == 19) begin
                             state <= DONE;
                         end else begin
-                            byte_idx <= byte_idx + 1;
+                            byte_idx <= byte_idx + 5'd1;
                             state    <= LOAD;
                         end
                     end

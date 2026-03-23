@@ -58,7 +58,7 @@ module uart_tx #(parameter CLKS_PER_BIT = 434) (
                 START: begin
                     tx_serial <= 1'b0;  // start bit = LOW
                     if (clk_count < CLKS_PER_BIT - 1) begin
-                        clk_count <= clk_count + 1;
+                        clk_count <= clk_count + 10'd1;
                     end else begin
                         clk_count <= 0;
                         state     <= DATA;
@@ -68,11 +68,11 @@ module uart_tx #(parameter CLKS_PER_BIT = 434) (
                 DATA: begin
                     tx_serial <= tx_data_r[bit_index];
                     if (clk_count < CLKS_PER_BIT - 1) begin
-                        clk_count <= clk_count + 1;
+                        clk_count <= clk_count + 10'd1;
                     end else begin
                         clk_count <= 0;
                         if (bit_index < 7) begin
-                            bit_index <= bit_index + 1;
+                            bit_index <= bit_index + 3'd1;
                         end else begin
                             bit_index <= 0;
                             state     <= STOP;
@@ -83,7 +83,7 @@ module uart_tx #(parameter CLKS_PER_BIT = 434) (
                 STOP: begin
                     tx_serial <= 1'b1;  // stop bit = HIGH
                     if (clk_count < CLKS_PER_BIT - 1) begin
-                        clk_count <= clk_count + 1;
+                        clk_count <= clk_count + 10'd1;
                     end else begin
                         clk_count <= 0;
                         state     <= IDLE;

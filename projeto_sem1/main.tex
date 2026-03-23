@@ -1,0 +1,1669 @@
+\documentclass[a4paper,12pt,twoside]{article}
+%! TEX program = lualatex
+\usepackage[brazilian]{babel}
+\usepackage{poliusp}
+\usepackage{amsmath,amssymb}
+\usepackage{array}
+\usepackage{longtable,booktabs,calc}
+\usepackage{soul}
+\usepackage{newunicodechar}
+\usepackage{etoolbox}
+\usepackage{listings}
+\usepackage{verbatim}
+
+% Definição de cores para o realce de sintaxe
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.9, 0.9, 0.9}
+
+\usepackage[backend=biber]{biblatex}
+\addbibresource{referencias.bib}
+
+% Configuração do estilo Verilog
+\lstdefinestyle{verilogstyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize, % Ajustado para caber mais código sem perder legibilidade
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=Verilog
+}
+\lstset{style=verilogstyle}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+
+\newunicodechar{◻}{\ensuremath{\square}}
+
+\geometry{
+  inner=3cm,
+  outer=3cm,
+  top=3cm,
+  bottom=2.5cm,
+  bindingoffset=0cm
+}
+
+\titulo{PROJETO Beat by Bit -- SEMANA 2}
+\subtitulo{Especificação da Bancada B7 -- Turma 4 -- Prof. Edson T. Midorikawa}
+\disciplina{PCS3635 -- Laboratório de Projeto de Sistemas Digitais I}
+\Autores{
+        Victor Bertelli - 15490941\\
+        Gabriel Zocal Santos - 15454039\\
+        Caio Nassar de Souza - 15444601\\
+}
+\departamento{Departamento de Engenharia de Computação e Sistemas Digitais}
+\data{\today}
+
+\begin{document}
+\tableofcontents
+\clearpage
+
+\section{Introdução}\label{introduuxe7uxe3o}
+
+O projeto "Beat by Bit" insere-se no desenvolvimento de tecnologias assistivas e intervenções terapêuticas voltadas para crianças com Transtorno do Espectro Autista (TEA), especificamente na faixa etária de 6 a 11 anos. A escolha de uma intervenção baseada em música justifica-se pelo fato de que as capacidades musicais são identificadas como uma força particular da comunidade autista, que frequentemente apresenta maior precisão em tarefas de identificação auditiva e memória de tom. A musicoterapia é amplamente estabelecida como benéfica para esse público, auxiliando na melhoria da atenção, sincronia motora e comportamentos prossociais de uma forma não invasiva e engajadora.
+
+\section{Especificação Técnica do
+Projeto}\label{especificauxe7uxe3o-tuxe9cnica-do-projeto}
+
+
+
+\subsection{Contexto de Aplicação do
+Projeto}\label{contexto-de-aplicauxe7uxe3o-do-projeto}
+
+Este projeto insere-se no contexto do desenvolvimento de tecnologias interativas acessíveis para crianças com Transtorno do Espectro Autista (TEA), com foco no uso de jogos sérios e estímulos musicais como apoio ao desenvolvimento motor, cognitivo e comportamental. A literatura indica que jogos sérios podem atuar como ferramentas complementares de intervenção, embora ainda exista carência de métodos padronizados para sua avaliação \cite{carvalho2024}.
+
+A proposta de um jogo de ritmo inspirado em \emph{Guitar Hero} é justificada por estudos que apontam benefícios de intervenções com música e movimento em crianças com TEA, incluindo melhora de aspectos cognitivos, motores e comportamentais \cite{kanzari2025,dobesh2023}. Além disso, jogos musicais apresentam potencial para treinamento rítmico e motor, desde que sejam projetados com acessibilidade, previsibilidade e adequação ao perfil do usuário \cite{begel2017,bagchi2023}. Dessa forma, o projeto busca unir acessibilidade, interação lúdica e coleta de métricas de desempenho em uma solução com relevância técnica e social.
+
+Dentre as características de pessoas com TEA que são exploradas pelo projeto, apresentam-se:
+
+\begin{itemize}
+  \item \textbf{Coordenação visuo-motora}: A pessoa vê o estímulo na tela e responde com o botão correspondente;
+  \item \textbf{Atenção sustentada}: É preciso acompanhar continuamente as trilhas e as notas;
+  \item \textbf{Resposta a estímulos multissensoriais controlados}: Há integração entre estímulo visual, ritmo e ação motora, mas com cuidado para evitar sobrecarga sensorial.
+\end{itemize}
+\subsection{Objetivos do Projeto}\label{objetivos-do-projeto}
+
+O objetivo principal deste projeto é desenvolver um jogo de ritmo acessível, inspirado em \emph{Guitar Hero}, voltado a crianças com Transtorno do Espectro Autista (TEA), utilizando FPGA como plataforma de controle e uma interface visual adequada ao público-alvo. A proposta busca unir interação lúdica, previsibilidade e resposta em tempo real, de modo a criar uma atividade capaz de estimular coordenação visuo-motora, atenção e sincronização temporal \cite{kanzari2025,dobesh2023}.
+
+Como objetivos específicos, pretende-se:
+\begin{itemize}
+  \item implementar uma arquitetura digital modular para leitura de entradas e controle do jogo;
+  \item desenvolver uma interface com baixa sobrecarga sensorial e feedback visual claro;
+  \item e estruturar o sistema de forma que permita registrar métricas simples de desempenho, como acertos, erros e tempo de resposta.
+\end{itemize} 
+Esses objetivos se justificam tanto pela relevância social de propor uma ferramenta acessível para o público com TEA quanto pelo valor técnico do projeto, que integra hardware digital, temporização e interação em uma aplicação com propósito educacional e assistivo \cite{carvalho2024,bagchi2023,begel2017}.
+
+\subsection{Descrição de Recursos e
+Custos}\label{descriuxe7uxe3o-de-recursos-e-custos}
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi})}
+\item
+  A lista de materiais necessários para o projeto está apresentada a seguir. Caso haja necessidade
+\end{enumerate}
+
+\begin{quote}
+DICA: Para este item, utilizar o modelo tabular fornecido na Tabela 1.
+\end{quote}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Lista de Materiais e Custo do Projeto}
+\begin{tabular}{|>{\centering\arraybackslash}p{0.18\textwidth}|>{\centering\arraybackslash}p{0.14\textwidth}|>{\centering\arraybackslash}p{0.14\textwidth}|>{\centering\arraybackslash}p{0.14\textwidth}|>{\centering\arraybackslash}p{0.24\textwidth}|}
+\hline
+\textbf{Item} & \textbf{Quantidade} & \textbf{Custo Unitário} & \textbf{Custo Total} & \textbf{Referência} \\ \hline
+\strut Botão modelo arcade & \strut 5 & \strut R\$11,90 & \strut R\$65,12 & \strut https://www.eletrogate.com/chave-botao-arcade-iluminado-sem-trava-60mm \\ \hline
+\strut Case para os botões (controle) & \strut 1 & \strut & \strut & \strut \\ \hline
+\strut & \strut & \strut & \strut & \strut \\ \hline
+\strut & \strut & \strut & \strut & \strut \\ \hline
+\strut & \strut & \strut & \strut & \strut \\ \hline
+\strut & \strut & \strut & \strut & \strut \\ \hline
+\multicolumn{3}{|>{\centering\arraybackslash}p{0.46\textwidth}|}{\textbf{Custo Total do Projeto:}} & \multicolumn{2}{>{\centering\arraybackslash}p{0.38\textwidth}|}{R\$65,12} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi})}
+\setcounter{enumi}{1}
+\item
+  Quantidade de horas de trabalho semanais planejadas pela equipe: 4 horas por aluno.
+\end{enumerate}
+
+
+\section{Especificação de Requisitos}
+A seguir encontram-se as tabelas com as especificações de requisitos para o projeto "Beat By Bit":
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito BOTOES}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} BOTOES & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Botões Arcade} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} 5 unidades de botões arcade de diferentes cores.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}Os botões de arcade são necessários para garantir durabilidade e oferecer um feedback tátil claro, facilitando a coordenação visuo-motora do usuário. O uso de cores distintas auxilia na associação visual rápida com as trilhas na tela.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito CAIXA}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} CAIXA & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Caixa em MDF} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Estrutura que conterá o arranjo de botões.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \square\ Média \blacksquare\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito FPGA}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} FPGA & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} FPGA CycloneV} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Placa de desenvolvimento integradora.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:} A escolha do FPGA (Cyclone V) permite o processamento paralelo e em tempo real dos sinais, garantindo que a latência entre o aperto do botão e a resposta do sistema seja mínima.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:} COMUNICACAO, INTERFACE, BOTOES} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito CABOS}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} CABOS & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Conectores} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Jumpers, cabos e fios que funcionarão como conectores entre os componentes do projeto.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \square\ Média \blacksquare\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito SOLDA}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} SOLDA & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Estação de solda} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Será utilizado para montagem dos componentes.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \square\ Média \blacksquare\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito FURADEIRA}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} FURADEIRA & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Furadeira} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Será utilizada para montagem da estação de controle com os botões.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \square\ Média \blacksquare\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito MULTIMETRO}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} MULTIMETRO & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Multímetro} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Será utilizado para verificação das soldas e conexões do circuito.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \square\ Média \blacksquare\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito COMPUTADOR}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} COMPUTADOR & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Computador} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Será a interface de resposta do jogo.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito INTEGRANTES}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} INTEGRANTES & \square\ Funcional \blacksquare\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Integrantes} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Serão divividos para realizar funções-chave do projeto.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito DIFICULDADE\_JOGO}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} DIFICULDADE\_JOGO & \blacksquare\ Funcional \square\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Configuração de dificuldade do jogo.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} O projeto deve possuir diferentes níveis de dificuldade, que diferem entre si pelo intervalo de tempo em que o botão apertado é lido como correto.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \square\ Média \blacksquare\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:} A literatura indica que intervenções com música e ritmo promovem melhorias cognitivas em crianças com TEA. Ajustar a janela temporal de acerto permite que a atividade seja adaptada ao estágio de desenvolvimento motor de cada indivíduo.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:} INTERFACE} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito SEL\_MUSICA}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} SEL\_MUSICA & \blacksquare\ Funcional \square\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Seleção entre as músicas disponíveis.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} O sistema deve oferecer diferentes músicas que o usuário pode selecionar para jogar, com diferentes quantidades de botões que devem ser apertados.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:}} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito INTERFACE}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} INTERFACE & \blacksquare\ Funcional \square\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Interface do jogo} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Interface gráfica que mostra ao usuário as cores dos botões que devem ser apertados no momento correto da música.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:} A interface deve oferecer estimulação sensorial controlada. O feedback visual curto e não intrusivo é planejado especificamente para evitar sobrecarga sensorial, focando apenas no reforço do acerto ou erro.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:} SEL\_MUSICA, DIFICULDADE\_JOGO, FPGA.} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Especificação do Requisito COMUNICACAO}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.45\textwidth}|>{\raggedright\arraybackslash}p{0.45\textwidth}|}
+\hline
+\textbf{Código:} COMUNICACAO & \blacksquare\ Funcional \square\ Não Funcional \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisito:} Comunicação entre FPGA e computador.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Descrição:} Saídas da FPGA devem ser lidas pelo computador para leitura.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Prioridade:} \blacksquare\ Alta \square\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Estabilidade:} \square\ Alta \blacksquare\ Média \square\ Baixa} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{\emph{Rationale}:} Uma comunicação de baixa latência é obrigatória para que não haja ``delay'' perceptível entre a ação física e o feedback visual, cuja iconsistências sensoriais podem desestimular o engajamento do usuários.} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{0.90\textwidth}|}{\textbf{Requisitos associados:} FPGA, COMPUTADOR, BOTOES} \\ \hline
+\end{tabular}
+\end{table}
+
+
+\section{Planejamento do Projeto (Esboço da Solução)}
+
+\subsection{Arquitetura do sistema}
+O sistema proposto consiste em um jogo de ritmo inspirado em Guitar Hero, implementado com FPGA como hardware base para leitura e processamento das entradas físicas, um controle com 4 botões de jogo e 1 botão de START/PAUSE, e uma interface gráfica executada em um computador. O foco do desenvolvimento é privilegiar a implementação em hardware digital no subsistema de controle e temporização, mantendo a interface visual em software para permitir maior flexibilidade gráfica e menor complexidade na etapa inicial do projeto.
+Assim como a interface gráfica, o áudio será processado no computador. A saída de áudio será uma caixa de som, garantindo que o volume possa ser regulado sem grandes problemas e apresentando uma alternativa à necessidade de utilizar buzzers que, além de não apresentarem boa qualidade sonora, necessitam de um considerável número de unidades para que possamos controlar eventuais atenuações de frequências.
+\subsubsection{Visão em blocos (alto nível)}
+A solução pode ser organizada nos seguintes subsistemas:
+
+\begin{enumerate}
+    \item \textbf{Controle físico (4 botões + START/PAUSE):} leitura dos botões físicos, com sincronização ao clock, \emph{debounce} e detecção de borda para geração de eventos discretos de entrada.
+    \item \textbf{Núcleo de controle (FPGA):} responsável por manter o estado do jogo, processar os sinais dos botões, controlar a contagem regressiva inicial e registrar as jogadas do usuário.
+    \item \textbf{Interface gráfica (computador):} responsável pela exibição visual do jogo em monitor, incluindo trilhas, notas, feedback visual e demais elementos da interface.
+    \item \textbf{Comunicação FPGA--computador:} interface de comunicação para envio dos eventos de entrada gerados na FPGA ao computador, permitindo que a interface em software reaja em tempo real às ações do jogador.
+\end{enumerate}
+
+\subsubsection{Organização modular (Lab Dig)}
+Desenvolvimento e implementação de Unidade de Controle e Fluxo de Dados (UC + FD):
+
+\begin{itemize}
+    \item \textbf{Unidade de Controle (UC):} implementa a FSM do jogo (início, contagem regressiva, execução, pausa e término), gera sinais de controle para o fluxo de dados e define as transições com base em eventos como \texttt{start}, \texttt{fim\_contagem}, \texttt{fim\_tempo} e \texttt{perdeu}.
+    \item \textbf{Fluxo de Dados (FD):} implementa os blocos de leitura das entradas, registradores, temporizador da contagem regressiva e geração de sinais de evento para a UC, como jogada realizada e acionamento de \texttt{start/pause}. Em etapas futuras, esse bloco poderá ser expandido para incluir lógica adicional de temporização e métricas.
+\end{itemize}
+
+\subsection{Descrição comportamental (esboço)}
+
+\subsubsection{Estados principais do jogo}
+Do ponto de vista comportamental, o sistema pode ser descrito por uma FSM em alto nível com os seguintes estados:
+
+\begin{enumerate}
+    \item \textbf{IDLE (repouso):} estado inicial aguardando comando de início. O sistema permanece em espera até detectar um pulso de \texttt{start}.
+    \item \textbf{COUNTDOWN (contagem regressiva):} etapa de preparação antes do início do jogo, correspondente à contagem regressiva inicial.
+    \item \textbf{PLAY (execução):} estado principal do jogo. Nessa etapa, o sistema processa as jogadas do usuário, registra eventos de entrada e mantém o controle temporal da sessão.
+    \item \textbf{PAUSE (pausa):} estado em que a execução da sessão é temporariamente interrompida.
+    \item \textbf{END\_WIN / END\_LOSE (término):} estados finais correspondentes ao encerramento da sessão por conclusão ou derrota, permitindo posterior reinício do sistema.
+\end{enumerate}
+
+\subsubsection{Regras de acerto (janela temporal)}
+A mecânica central do jogo é baseada em uma janela de acerto em torno da linha de validação (\emph{hit line}), implementada na interface do jogo. Quando o jogador pressiona um botão, o sistema registra a jogada e envia o evento correspondente para a aplicação responsável pela interface, que verifica se existe uma nota ativa na trilha correspondente dentro do intervalo permitido. Caso afirmativo, registra-se acerto; caso contrário, registra-se erro ou \emph{hit} fora do tempo. Além disso, se uma nota ultrapassar a linha de acerto sem um comando válido, registra-se um \emph{miss}.
+
+\subsection{Métricas e possíveis funcionalidades a mais}
+Como extensão do projeto com foco em objetivos além de entretenimento, propõem-se funcionalidades que permitam usar o jogo como ferramenta de treino e avaliação de habilidades de coordenação e atenção:
+
+\begin{enumerate}
+    \item \textbf{Métricas objetivas por sessão:} registrar ao final do jogo métricas simples e repetíveis, como:
+    \begin{itemize}
+        \item número de acertos e erros;
+        \item tempo de resposta;
+        \item percentual de acerto;
+        \item consistência de desempenho entre sessões.
+    \end{itemize}
+    Essas métricas podem ser exibidas na interface do jogo.
+
+    \item \textbf{Acessibilidade e regulação sensorial:} parâmetros ajustáveis de estímulo visual, ritmo e feedback, permitindo adequar a atividade a diferentes perfis de usuário.
+\end{enumerate}
+
+\subsection{Observação: necessidade de contadores e debounce para uso de botões}
+Como o jogo será operado por botões físicos (4 botões de jogo e 1 botão de START/PAUSE), é necessário incluir no projeto um tratamento adequado dos sinais de entrada para garantir funcionamento confiável em hardware real.
+
+Em botões mecânicos, a transição entre 0 e 1 não é instantânea: durante alguns milissegundos ocorre repique (\emph{bounce}), gerando oscilações rápidas que podem ser interpretadas como múltiplos apertos. Sem um mecanismo de \emph{debounce}, um único acionamento pode causar:
+
+\begin{itemize}
+    \item múltiplos comandos de START/PAUSE;
+    \item múltiplas ``jogadas'' registradas;
+    \item transições indevidas na FSM e resultados inconsistentes.
+\end{itemize}
+
+Dessa forma, o projeto deve incluir um bloco de entrada para cada botão, tipicamente composto por:
+
+\begin{enumerate}
+    \item Sincronização ao clock do sistema (para reduzir risco de metastabilidade);
+    \item \emph{Debounce} digital (garantir que o nível do botão permaneça estável por um intervalo mínimo antes de aceitar a mudança);
+    \item Detector de borda (gerar um pulso de 1 ciclo por acionamento, quando a lógica do jogo exigir evento discreto).
+\end{enumerate}
+
+Além disso, o projeto também depende de contadores para temporização interna, por exemplo para:
+
+\begin{itemize}
+    \item implementar a contagem regressiva inicial;
+    \item controlar duração de sessão e pausas;
+    \item gerar sinais temporais relevantes para a lógica do jogo.
+\end{itemize}
+
+Os valores exatos de tempo (ex.: intervalo de \emph{debounce} e duração da contagem regressiva) e as configurações finais serão definidos posteriormente, conforme testes em bancada e validação do comportamento do sistema.
+
+\section{Storytelling e Interações Externas}
+
+\subsection{Público-alvo e contexto de uso}
+O sistema proposto é direcionado a crianças e pré-adolescentes com TEA (aprox. 6--11 anos), em contexto de uso supervisionado (laboratório, escola ou clínica) ou em casa com orientação. O objetivo principal é oferecer uma atividade estruturada que estimule:
+
+\begin{itemize}
+    \item coordenação visuo-motora;
+    \item sincronização temporal (\emph{timing});
+    \item atenção sustentada;
+    \item controle inibitório (evitar apertos fora da janela de acerto);
+    \item autorregulação (pausar quando necessário).
+\end{itemize}
+
+A interação é feita por um controle físico com 5 botões: 4 botões de resposta (um por trilha) e 1 botão START/PAUSE. A interface principal é exibida em um monitor por meio de uma aplicação executada no computador, enquanto a FPGA atua no processamento das entradas físicas do controle.
+
+\subsection{Fluxo de interação (sessão típica)}
+O jogo possui uma sessão curta e previsível. Parâmetros como ritmo de apresentação e janela de acerto são definidos previamente pelo projeto, visando reduzir complexidade e manter a atividade consistente.
+
+\subsubsection{1) Estado inicial (IDLE)}
+O monitor apresenta uma tela simples indicando que a sessão está pronta para iniciar (por exemplo, ``Pressione START''). Não há menus longos nem configurações na versão inicial.
+
+Interação externa: o usuário pressiona o botão START.
+
+Objetivo: iniciar a sessão de forma clara, previsível e consistente.
+
+\subsubsection{2) Preparação (COUNTDOWN)}
+O sistema apresenta uma contagem regressiva curta (por exemplo, 3, 2, 1) para orientar o início da atividade. Essa etapa ajuda a organizar a atenção e reduzir ansiedade no início.
+
+Interação externa: nenhuma.
+
+Objetivo: estabelecer um início padronizado.
+
+\subsubsection{3) Execução da tarefa (PLAY)}
+O monitor exibe 4 trilhas fixas e uma linha de acerto. Estímulos visuais (``notas'') descem em direção à linha. O usuário deve pressionar o botão correspondente à trilha no momento em que a nota estiver na linha, dentro de uma janela temporal estabelecida.
+
+Interação externa:
+\begin{itemize}
+    \item Botões 1--4: respostas temporizadas (acertos/erros).
+    \item Botão START: permite pausar a sessão.
+\end{itemize}
+
+Feedback externo:
+\begin{itemize}
+    \item Acerto: indicação visual breve e não intrusiva.
+    \item Erro/Miss: indicação breve e controlada.
+\end{itemize}
+
+O feedback é propositalmente curto e controlado, para evitar sobrecarga sensorial e manter a tarefa objetiva.
+
+Objetivo: treinar sincronização visuo-motora e atenção com regras simples e consistentes.
+
+\subsubsection{4) Pausa (PAUSE)}
+Ao pressionar START durante a execução, o sistema entra em pausa. A tela indica estado de pausa e instrui que a retomada ocorre ao pressionar START novamente. Durante a pausa, o tempo do jogo fica congelado.
+
+Interação externa: START alterna entre PAUSE e PLAY.
+
+Objetivo: permitir autorregulação e reduzir frustração ou fadiga sem encerrar a sessão.
+
+\subsubsection{5) Encerramento e resumo (END)}
+Ao final de um tempo fixo ou ao atingir uma condição de término prevista na lógica do sistema, o jogo encerra a sessão. A tela apresenta um resumo simples e objetivo, por exemplo:
+
+\begin{itemize}
+    \item número de acertos;
+    \item número de erros;
+    \item percentual de acerto.
+\end{itemize}
+
+Interação externa: START retorna ao início (ou reinicia a sessão).
+
+Objetivo: fornecer um retorno informativo e mensurável, facilitando comparação entre sessões.
+
+\section{Diagrama da FSM}
+Como descrito no storytelling, o digrama da maquina de estados finitos pode ser vista na figura \ref{fig:example_image}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/FSM_guitar.pdf}
+    \caption{Diagrama da FSM}
+    \label{fig:example_image}
+    
+\end{figure}
+
+Além disso, um esboço da interface do jogo pode ser vista em \ref{fig:example_image2}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/Untitled Diagram - Untitled Diagram.drawio.pdf}
+    \caption{Mockup da tela do jogo}
+    \label{fig:example_image2}
+    
+\end{figure}
+
+\subsection{Cronograma do Projeto}\label{cronograma-do-projeto}
+
+
+
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{4pt}
+
+\footnotesize
+\begin{longtable}{|p{0.27\textwidth}|>{\centering\arraybackslash}p{0.06\textwidth}|>{\centering\arraybackslash}p{0.06\textwidth}|>{\centering\arraybackslash}p{0.06\textwidth}|>{\centering\arraybackslash}p{0.06\textwidth}|p{0.24\textwidth}|}
+\caption{Plano de quatro semanas para o desenvolvimento do projeto Beat By Bit} \\
+\hline
+\textbf{Frente de desenvolvimento} & \textbf{S1} & \textbf{S2} & \textbf{S3} & \textbf{S4} & \textbf{Descrição resumida} \\ \hline
+\endfirsthead
+
+\hline
+\textbf{Frente de desenvolvimento} & \textbf{S1} & \textbf{S2} & \textbf{S3} & \textbf{S4} & \textbf{Descrição resumida} \\ \hline
+\endhead
+
+\hline
+\multicolumn{6}{r}{\textit{Continua na próxima página}} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+Arquitetura do sistema e definição dos módulos
+& \blacksquare & \square & \square & \square
+& Definição da arquitetura híbrida FPGA + PC, divisão de responsabilidades e organização dos blocos do sistema. \\ \hline
+
+Leitura dos 5 botões na FPGA
+& \blacksquare & \square & \square & \square
+& Implementação da captura dos botões, mapeamento das entradas e validação do funcionamento em hardware. \\ \hline
+
+Debounce e detector de borda
+& \blacksquare & \square & \square & \square
+& Tratamento de ruídos mecânicos dos botões e geração de eventos confiáveis de pressão. \\ \hline
+
+Comunicação serial FPGA $\rightarrow$ PC
+& \square & \blacksquare & \square & \square
+& Envio dos eventos dos botões da FPGA para o computador por UART/serial. \\ \hline
+
+Protótipo inicial da interface em Python
+& \square & \blacksquare & \blacksquare & \square
+& Criação da janela do jogo, trilhas visuais e recepção dos eventos enviados pela FPGA. \\ \hline
+
+Renderização das notas e das 5 colunas
+& \square & \blacksquare & \blacksquare & \square
+& Implementação visual das notas descendo pelas colunas no frontend em Python. \\ \hline
+
+Lógica de hit/miss, score e combo
+& \square & \square & \blacksquare & \square
+& Associação entre entrada física e notas na tela, cálculo de acertos, erros, combo e pontuação. \\ \hline
+
+Integração de música e sincronização
+& \square & \square & \square & \blacksquare
+& Reprodução de música, ajuste de latência e sincronização entre áudio, interface e entradas. \\ \hline
+
+Refinamento visual e acessibilidade
+& \square & \square & \square & \blacksquare
+& Melhorias estéticas e ajustes de legibilidade e feedbacks voltados ao público-alvo TEA. \\ \hline
+
+Testes integrados e correção de bugs
+& \square & \square & \square & \blacksquare
+& Testes completos do fluxo FPGA + Python, correções de falhas e validação da estabilidade do protótipo. \\ \hline
+
+Documentação e apresentação final
+& \square & \square & \square & \blacksquare
+& Organização da entrega, documentação técnica, preparação dos slides e da demonstração final. \\
+
+\end{longtable}
+\normalsize
+
+\begin{center}
+\footnotesize
+\blacksquare\ = atividade em desenvolvimento \hspace{1cm} \square\ = atividade não planejada para a semana
+\end{center}
+
+\begin{table}[htbp]
+\centering
+\caption{Tabela -- Cronograma do Projeto}
+\begin{tabular}{|>{\centering\arraybackslash}p{0.5\textwidth}|>{\centering\arraybackslash}p{0.5\textwidth}|}
+\hline
+\textbf{Requisito} & \textbf{Semana 1} \\ \hline
+\strut Arquitetura do sistema e definição dos módulos & Definição da arquitetura híbrida FPGA + PC, divisão de responsabilidades e organização dos blocos do sistema. \strut  \\ \hline
+\strut Leitura dos 5 botões na FPGA & Implementação da captura dos botões, mapeamento das entradas e validação do funcionamento em hardware. \strut  \\ \hline
+\strut Debounce e detector de borda & Tratamento de ruídos mecânicos dos botões e geração de eventos confiáveis de pressão. \strut  \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Semana 1 de Desenvolvimento do
+Projeto}\label{semana-1-de-desenvolvimento-do-projeto}
+Na semana 1, o foco do grupo é a estruturação da base do projeto. Nesse sentido, desenvolvemos a primeira versão da Unidade de Controle e do Fluxo de Dados do sistema. Além disso, integramos o básico: os botões que garantirão a jogabilidade e controle do jogo como um todo.
+
+O próximo passo será o teste em bancada para verificar o funcionamento até este ponto.
+
+\subsection{Descrição Funcional do Projeto para a
+Semana}\label{descriuxe7uxe3o-funcional-do-projeto-para-a-semana}
+
+Nesta semana, o desenvolvimento concentrou-se na definição da arquitetura base do sistema e na implementação inicial do subsistema de entrada. O projeto foi organizado segundo a separação entre \textbf{Unidade de Controle (UC)} e \textbf{Fluxo de Dados (FD)}, de modo que a UC represente os estados principais de operação do jogo, enquanto o FD concentre o processamento dos sinais de entrada e, futuramente, das variáveis internas da mecânica do jogo. Essa divisão estabelece uma estrutura modular adequada para evolução incremental e integração com os demais blocos do sistema.
+
+Do ponto de vista funcional, foi implementado o tratamento dos sinais provenientes dos botões físicos, incluindo sincronização ao clock, \emph{debounce} digital e detecção de borda, garantindo que cada acionamento gere um pulso discreto e confiável para a lógica sequencial. Assim, embora a mecânica completa do jogo ainda não tenha sido concluída, o sistema já dispõe de uma base funcional capaz de representar estados de operação e interpretar corretamente os eventos de entrada, o que viabiliza a implementação das próximas etapas, como temporização, detecção de acertos, pontuação e integração com a interface.
+
+\begin{lstlisting}[language=Verilog, caption={Psudocódigo funcional da etapa atual}]
+inicializar sistema
+estado <- idle
+
+enquanto sistema estiver ligado:
+
+    ler botoes_raw[4:0]
+
+    separar entradas:
+        botoes_trilha <- botoes_raw[3:0]
+        start <- botoes_raw[4]
+
+    gerar jogada_feita a partir de qualquer aperto em botoes_trilha
+    gerar start_pulso a partir da borda de subida de start
+
+    se reset = 1:
+        estado <- idle
+    senao:
+        escolha estado:
+
+            caso idle:
+                zera_timer <- 1
+                conta_timer <- 0
+                limpaR <- 1
+                registraR <- 0
+
+                se start_pulso = 1:
+                    estado <- countdown
+
+            caso countdown:
+                zera_timer <- 0
+                conta_timer <- 1
+                limpaR <- 0
+                registraR <- 0
+
+                contar tempo da contagem regressiva
+
+                se fim_contagem = 1:
+                    estado <- play
+
+            caso play:
+                zera_timer <- 0
+                conta_timer <- 1
+                limpaR <- 0
+
+                se jogada_feita = 1:
+                    registraR <- 1
+                    salvar botoes_trilha no registrador de jogada
+                senao:
+                    registraR <- 0
+
+                se perdeu = 1:
+                    estado <- end_lose
+                senao se fim_tempo = 1:
+                    estado <- end_win
+                senao se start_pulso = 1:
+                    estado <- pause
+
+            caso pause:
+                zera_timer <- 0
+                conta_timer <- 0
+                limpaR <- 0
+                registraR <- 0
+
+                se start_pulso = 1:
+                    estado <- play
+
+            caso end_win:
+                zera_timer <- 1
+                conta_timer <- 0
+                limpaR <- 0
+                registraR <- 0
+
+                se start_pulso = 1:
+                    estado <- idle
+
+            caso end_lose:
+                zera_timer <- 1
+                conta_timer <- 0
+                limpaR <- 0
+                registraR <- 0
+
+                se start_pulso = 1:
+                    estado <- idle
+
+            outro caso:
+                estado <- idle
+\end{lstlisting}
+
+\subsection{Detalhamento do Projeto Lógico do Hardware
+Programável}\label{detalhamento-do-projeto-luxf3gico-do-hardware-programuxe1vel}
+
+Esta seção do documento tem a finalidade de descrever detalhes do projeto lógico de hardware programável desenvolvido na Semana 1.
+
+\subsubsection{Projeto do Fluxo de
+Dados}\label{projeto-do-fluxo-de-dados}
+
+\begin{lstlisting}[language=Verilog, caption={Fluxo de Dados}]
+module fluxo_dados (
+    input clock,
+    input reset,
+    
+    // Sinais de controle vindos da UC para gerenciar a jogada
+    input limpaR,              
+    input registraR,           
+    input zera_timer,          // NOVO: Para resetar o timer
+    input conta_timer,         // NOVO: Para habilitar a contagem
+    input [3:0] db_estado,     // NOVO: Para saber se esta no COUNTDOWN
+    
+    // Entradas fisicas
+    input [4:0] botoes_raw,    // [4] = Start/Pause, [3:0] = Botoes do jogo
+    
+    // Saidas de dados e controle
+    output [3:0] s_jogada,     // Jogada
+    output jogada_feita,       // Indica aperto de nota
+    output start_pulso,        // Indica aperto do start
+    
+    output fim_contagem,
+    output fim_tempo,
+    output perdeu
+);
+
+    // Separando os botões para facilitar a logica
+    wire [3:0] botoes_trilha = botoes_raw[3:0]; // Botoes do jogo
+    wire start = botoes_raw[4];                 // Botao de controle
+
+    // Verifica se ha jogada
+    wire s_tem_jogada = |botoes_trilha; 
+
+    // Gera o pulso de 'jogada_feita' para avisar a UC
+    edge_detector u_edge_jogada (
+        .clock(clock),
+        .reset(reset | limpaR),
+        .sinal(s_tem_jogada),
+        .pulso(jogada_feita)
+    );
+
+    // Temporizador de 3 segundos para o countdown (1kHz = 3000 contagens)
+    contador_m #(.M(3000), .N(12)) timer_countdown (
+        .clock   (clock),
+        .zera_as (reset),
+        .zera_s  (zera_timer),
+        // Conta apenas quando a UC autoriza e estamos no estado COUNTDOWN (0001)
+        .conta   (conta_timer && (db_estado == 4'b0001)),
+        .Q       (),             // Valor de Q não é exportado nesta fase
+        .fim     (fim_contagem), // Gera o sinal que faz a UC pular para PLAY
+        .meio    ()
+    );
+
+    // Registrador que "salva" a jogada quando a UC manda (registraR)
+    registrador_4 RegBotoes (
+        .clock(clock),
+        .clear(limpaR),
+        .enable(registraR),
+        .D(botoes_trilha),
+        .Q(s_jogada)
+    );
+
+    // Detector de borda para o Start/Pause
+    edge_detector u_edge_start (
+        .clock(clock),
+        .reset(reset),
+        .sinal(start),
+        .pulso(start_pulso)
+    );
+
+    // Sinais temporarios
+    assign fim_tempo = 1'b0;    
+    assign perdeu = 1'b0; 
+
+endmodule
+\end{lstlisting}
+
+O Fluxo de Dados recebe os sinais não tratados dos cinco botões arcade (quatro do jogo em si e um de controle (\texttt{start} e \texttt{pause})) e utiliza detectores de borda para convertê-los em pulsos de um ciclo de clock, a fim de evitar múltiplas leituras. Além disso, o módulo contém um temporizador de três segundos para controlar a transição automática do estado de preparação, e um registrador de quatro bits encarregado de capturar e reter a exata combinação de botões pressionada pelo jogador no exato instante de uma jogada válida.
+
+\subsubsection{Projeto da Unidade de
+Controle}\label{projeto-da-unidade-de-controle}
+
+\begin{lstlisting}[language=Verilog, caption={Unidade de Controle}]
+module unidade_controle (
+    input clock,
+    input reset,
+    input start,               // start_pulso do FD
+    input jogada,              // Vem do jogada_feita do FD
+    input fim_contagem,        // Sinal do FD indicando fim do 3-2-1      
+    input fim_tempo,           // Sinal do FD indicando fim da música/sessão      
+    input perdeu,              // Sinal do FD indicando limite de erros atingido         
+    output reg registraR,      // Sinal para o FD salvar a jogada
+    output reg limpaR,         // Sinal para o FD limpar o registrador
+    output reg zera_timer,
+    output reg conta_timer,
+    output reg [3:0] db_estado // Depuração nos displays
+);
+
+    parameter idle      = 4'b0000; // 0: Aguardando START
+    parameter countdown = 4'b0001; // 1: Preparação 3, 2, 1
+    parameter play      = 4'b0010; // 2: Execução do jogo
+    parameter pause     = 4'b0011; // 3: Jogo pausado
+    parameter end_win   = 4'b0100; // 4: Vitoria
+    parameter end_lose  = 4'b0101; // 5: Derrota
+
+    reg [3:0] Eatual, Eprox;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset) Eatual <= idle;
+        else Eatual <= Eprox;
+    end
+
+    always @* begin
+        case (Eatual)
+            idle:      Eprox = start ? countdown : idle;
+            countdown: Eprox = fim_contagem ? play : countdown;
+            play:      Eprox = perdeu ? end_lose : 
+                               (fim_tempo ? end_win : 
+                               (start ? pause : play));
+            pause:     Eprox = start ? play : pause;
+            end_win:   Eprox = start ? idle : end_win;
+            end_lose:  Eprox = start ? idle : end_lose;
+            default:   Eprox = idle;
+        endcase
+    end
+
+    always @* begin
+        zera_timer  = (Eatual == idle || Eatual == end_win || Eatual == end_lose) ? 1'b1 : 1'b0;
+        conta_timer = (Eatual == countdown || Eatual == play) ? 1'b1 : 1'b0;
+        limpaR      = (Eatual == idle) ? 1'b1 : 1'b0;
+        registraR   = (Eatual == play && jogada) ? 1'b1 : 1'b0;
+        db_estado   = Eatual;
+    end
+
+endmodule
+\end{lstlisting}
+
+A Unidade de Controle gerencia o fluxo de interação da sessão do usuário, transitando entre os estados de repouso (\texttt{idle}), preparação (\texttt{countdown}), execução (\texttt{play}), pausa (\texttt{pause}) e encerramento(\texttt{end\_lose} ou \texttt{end\_win}). Ele avalia os pulsos tratados recebidos do Fluxo de Dados, como os comandos de \texttt{start} ou de \texttt{jogada}, e dita o ritmo do hardware ao acionar os sinais de controle. Esses sinais autorizam o Fluxo de Dados a zerar ou iniciar contadores de tempo e a registrar as jogadas do usuário apenas nos momentos válidos do jogo.
+
+\begin{longtable}{|>{\centering\arraybackslash}p{0.13\textwidth}|>{\centering\arraybackslash}p{0.24\textwidth}|>{\centering\arraybackslash}p{0.12\textwidth}|>{\centering\arraybackslash}p{0.40\textwidth}|}
+\caption{Descrição da Unidade de Controle do Sistema} \label{tab:uc_descricao} \\
+\hline
+\textbf{Nome do Estado} & \textbf{Descrição do Estado} & \textbf{Próximo Estado} & \textbf{Condições e Justificativas para a Transição entre Estados} \\ \hline
+\endfirsthead
+
+% Cabeçalho que aparecerá nas páginas seguintes
+\multicolumn{4}{c}{{\bfseries \tablename\ \thetable{} -- Continuação da página anterior}} \\
+\hline
+\textbf{Nome do Estado} & \textbf{Descrição do Estado} & \textbf{Próximo Estado} & \textbf{Condições e Justificativas para a Transição entre Estados} \\ \hline
+\endhead
+
+% Rodapé que aparecerá no final das páginas que foram cortadas
+\hline \multicolumn{4}{|r|}{{Continua na próxima página...}} \\ \hline
+\endfoot
+
+% Rodapé que aparecerá apenas no final da última página da tabela
+\endlastfoot
+
+\textbf{idle} 
+& Estado inicial do sistema, no qual o jogo permanece em espera pelo comando de início. Nesse estado, o registrador de jogada é limpo e o temporizador permanece zerado. 
+& \textbf{countdown} ou \textbf{idle} 
+& A transição para \textbf{countdown} ocorre quando o sinal \texttt{start} é ativado, indicando que o botão de início foi pressionado. Caso contrário, o sistema permanece em \textbf{idle}, aguardando nova interação do usuário. \\ \hline
+
+\textbf{countdown} 
+& Estado de preparação para a partida, responsável pela contagem regressiva inicial antes do início efetivo do jogo. Durante esse estado, o temporizador é habilitado para contar o intervalo correspondente ao ``3-2-1''. 
+& \textbf{play} ou \textbf{countdown} 
+& A transição para \textbf{play} ocorre quando o sinal \texttt{fim\_contagem} é ativado pelo fluxo de dados, indicando que o temporizador da contagem regressiva terminou. Enquanto isso não ocorre, o sistema permanece em \textbf{countdown}. \\ \hline
+
+\textbf{play} 
+& Estado principal de execução do jogo. Nesse estado, o sistema habilita o andamento da partida e, quando uma jogada é detectada, ativa o sinal \texttt{registraR} para armazenar a entrada do jogador. 
+& \textbf{end\_lose}, \textbf{end\_win}, \textbf{pause} ou \textbf{play} 
+& A transição para \textbf{end\_lose} ocorre quando o sinal \texttt{perdeu} é ativado, representando condição de derrota. A transição para \textbf{end\_win} ocorre quando o sinal \texttt{fim\_tempo} é ativado, indicando encerramento bem-sucedido da sessão. A transição para \textbf{pause} ocorre quando o sinal \texttt{start} é acionado durante a partida. Na ausência dessas condições, o sistema permanece em \textbf{play}. \\ \hline
+
+\textbf{pause} 
+& Estado de pausa temporária do jogo. Nesse modo, a execução da partida é interromida momentaneamente, preservando o estado atual do sistema até nova ação do usuário. 
+& \textbf{play} ou \textbf{pause} 
+& A transição para \textbf{play} ocorre quando o sinal \texttt{start} é novamente ativado, indicando retomada da partida. Caso contrário, o sistema permanece em \textbf{pause}. \\ \hline
+
+\textbf{end\_win} 
+& Estado final associado ao término bem-sucedido da sessão. Nesse estado, o temporizador volta a ser zerado e o sistema aguarda comando para reinício. 
+& \textbf{idle} ou \textbf{end\_win} 
+& A transição para \textbf{idle} ocorre quando o sinal \texttt{start} é ativado, permitindo reinicializar o sistema para uma nova partida. Enquanto isso não ocorre, o sistema permanece em \textbf{end\_win}. \\ \hline
+
+\textbf{end\_lose} 
+& Estado final associado ao encerramento por derrota. Nesse estado, o temporizador também permanece zerado e o sistema aguarda comando para retornar ao início. 
+& \textbf{idle} ou \textbf{end\_lose} 
+& A transição para \textbf{idle} ocorre quando o sinal \texttt{start} é ativado, permitindo o reinício da operação. Na ausência desse comando, o sistema permanece em \textbf{end\_lose}. \\ \hline
+
+\textbf{default} 
+& Estado de segurança utilizado caso ocorra uma codificação inválida no registrador de estados da UC. Sua função é garantir recuperação segura do sistema. 
+& \textbf{idle} 
+& Sempre que a máquina de estados assume uma condição não prevista explicitamente, a UC força a transição para \textbf{idle}, restabelecendo um ponto seguro e conhecido de operação. \\ \hline
+
+\end{longtable}
+
+\subsubsection{Projeto do Sistema Digital
+Programável}\label{projeto-do-sistema-digital-programuxe1vel}
+
+\begin{lstlisting}[language=Verilog, caption={Top-Level}]
+module beat_by_bit (
+    input clock,
+    input reset,
+    input [4:0] botoes,       
+    output [6:0] db_estado,   // HEX0: Estado da FSM
+    output [6:0] db_jogada,   // HEX1: Mostra qual botão foi lido (1, 2, 4, 8)
+    output [4:0] leds_pulsos  // LEDs para depurar os pulsos de borda
+);
+
+    wire s_registraR, s_limpaR;
+    wire s_jogada_feita, s_start_pulso;
+    wire s_fim_contagem, s_fim_tempo, s_perdeu;
+    wire s_zera_timer, s_conta_timer; // Fios adicionados para o timer
+    wire [3:0] s_estado, s_valor_jogada;
+
+    assign leds_pulsos = {s_start_pulso, 3'b000, s_jogada_feita};
+
+    unidade_controle u_uc (
+        .clock(clock),
+        .reset(reset),
+        .start(s_start_pulso),
+        .jogada(s_jogada_feita),
+        .fim_contagem(s_fim_contagem),
+        .fim_tempo(s_fim_tempo),
+        .perdeu(s_perdeu),
+        .registraR(s_registraR),
+        .limpaR(s_limpaR),
+        .zera_timer(s_zera_timer),
+        .conta_timer(s_conta_timer),
+        .db_estado(s_estado)
+    );
+
+    fluxo_dados u_fd (
+        .clock(clock),
+        .reset(reset),
+        .limpaR(s_limpaR),
+        .registraR(s_registraR),
+        .zera_timer(s_zera_timer),
+        .conta_timer(s_conta_timer),
+        .db_estado(s_estado),
+        .botoes_raw(botoes),
+        .s_jogada(s_valor_jogada),
+        .jogada_feita(s_jogada_feita),
+        .start_pulso(s_start_pulso),
+        .fim_contagem(s_fim_contagem),
+        .fim_tempo(s_fim_tempo),
+        .perdeu(s_perdeu)
+    );
+
+    hexa7seg u_hex_est (
+        .hex(s_estado),
+        .seg(db_estado)
+    );
+
+    hexa7seg u_hex_jog (
+        .hex(s_valor_jogada),
+        .seg(db_jogada)
+    );
+
+endmodule
+\end{lstlisting}
+
+O módulo Top-Level faz a ponte entre a lógica interna do hardware e os pinos físicos da placa FPGA Cyclone V. Ele conecta os botões externos conectados via GPIO aos tratamentos do Fluxo de Dados e direciona saídas cruciais para a interface da placa, utilizando decodificadores para exibir o estado atual da máquina no display de sete segmentos HEX0, a leitura binária da jogada registrada no HEX1 e os pulsos de botões em LEDs para fins de depuração.
+
+\subsection{Plano de Testes do Hardware Programável e
+  Simulações}\label{plano-de-testes-do-hardware-programavel-e-simulacoes}
+
+
+  Os dois primeiros cenários focam na validação isolada da Unidade de Controle (Máquina de Estados Finitos),
+  garantindo que as transições de estado para as condições de vitória e derrota ocorram de maneira
+  determinística mediante os estímulos dos sinais de controle. O terceiro cenário realiza uma verificação
+  integrada, estimulando o Fluxo de Dados com entradas físicas simuladas (botões e \textit{clock}) para
+  validar o comportamento temporal, a contagem de atrasos e a comunicação entre os módulos de dados e a
+  unidade de controle. Os detalhes e resultados de cada cenário estão descritos nas subseções a seguir.
+
+  \subsubsection{Cenário de Teste 1 -- Simulação do Caminho de Vitória da Unidade de
+  Controle}\label{cenario-de-teste-x-simulacao-vitoria}
+
+
+  Este cenário tem como objetivo validar o fluxo completo e bem-sucedido do jogo pela perspectiva da Unidade
+  de Controle (FSM), desde a inicialização do sistema até a condição de vitória. O testbench
+  (\texttt{tb\_uc\_ganha.v}) estimula diretamente os sinais de controle, ignorando o fluxo de dados real.
+
+
+  A simulação verifica as transições de estado para preparação (\texttt{countdown}), execução do jogo
+  (\texttt{play}), funcionalidade de pausa e retorno (\texttt{pause} para \texttt{play}), a correta emissão do
+  sinal de captura de botão (\texttt{registraR}) durante uma jogada, e finalmente, a transição para o estado
+  de vitória (\texttt{end\_win}) quando o tempo da música esgota (\texttt{fim\_tempo}). A tabela a seguir
+  detalha os estímulos aplicados e os resultados esperados em cada etapa.
+
+
+  \begin{table}[H]
+  \centering
+  \caption{Tabela 1 -- Descrição e Resultados Simulados do Cenário de Teste X (Vitória)}
+  \begin{tabular}{|>{\centering\arraybackslash}p{0.22\textwidth}|>{\centering\arraybackslash}p{0.30\textwidth}
+  |>{\centering\arraybackslash}p{0.15\textwidth}|>{\centering\arraybackslash}p{0.25\textwidth}|}
+  \hline
+  \textbf{Entradas (Estímulos)} & \textbf{Saídas Esperadas (Estado e Sinais)} & \textbf{Resultado Simulado
+  OK?} & \textbf{Análise de Não Conformidades} \\ \hline
+
+
+  \texttt{reset} = 1 \newline (Inicialização) &
+  \texttt{db\_estado} = \texttt{0000} (idle) \newline \texttt{limpaR}=1, \texttt{zera\_timer}=1,
+  \texttt{conta\_timer}=0 &
+  Sim &
+  Nenhuma. Sistema inicializado corretamente. \\ \hline
+
+
+  Pulso em \texttt{start} = 1 \newline (Início do Jogo) &
+  \texttt{db\_estado} = \texttt{0001} (countdown) \newline \texttt{limpaR}=0, \texttt{zera\_timer}=0,
+  \texttt{conta\_timer}=1 &
+  Sim &
+  Nenhuma. O timer é habilitado para contagem. \\ \hline
+
+
+  Pulso em \texttt{fim\_contagem} = 1 \newline (Fim do 3-2-1) &
+  \texttt{db\_estado} = \texttt{0010} (play) \newline Mantém \texttt{conta\_timer}=1 &
+  Sim &
+  Nenhuma. O jogo entra em modo de execução. \\ \hline
+
+
+  Pulso em \texttt{jogada} = 1 \newline (Acerto de nota no Play) &
+  Pulso em \texttt{registraR} = 1 \newline (Autoriza salvar a jogada) &
+  Sim &
+  Nenhuma. Sinal de registro pulsou em sincronia com a jogada. \\ \hline
+
+
+  Pulso em \texttt{start} = 1 \newline (Pausa durante o jogo) &
+  \texttt{db\_estado} = \texttt{0011} (pause) \newline \texttt{conta\_timer}=0 (congela o tempo) &
+  Sim &
+  Nenhuma. FSM pausa e paralisa o timer. \\ \hline
+
+
+  Pulso em \texttt{start} = 1 \newline (Retorno da pausa) &
+  \texttt{db\_estado} = \texttt{0010} (play) \newline \texttt{conta\_timer}=1 (retoma o tempo) &
+  Sim &
+  Nenhuma. Jogo e contagem do timer retomados normalmente. \\ \hline
+
+
+  Pulso em \texttt{fim\_tempo} = 1 \newline (Fim da música) &
+  \texttt{db\_estado} = \texttt{0100} (end\_win) \newline \texttt{zera\_timer}=1, \texttt{conta\_timer}=0 &
+  Sim &
+  Nenhuma. FSM transita para vitória e desativa temporizadores. \\ \hline
+
+  \end{tabular}
+  \end{table}
+
+
+  \vspace{1em}
+ \begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{images/uc_ganha.png}
+  \caption{ModelSim cenario de ganhou}
+  \label{fig:uc_ganha}
+  
+ \end{figure}
+
+\begin{lstlisting}[language=Verilog, caption={Testbench cenário de vitória}]
+`timescale 1ms/100us 
+
+module tb_uc_ganha;
+
+    reg clock, reset, start, jogada, fim_contagem, fim_tempo, perdeu;
+    wire registraR, limpaR, zera_timer, conta_timer;
+    wire [3:0] db_estado;
+
+    unidade_controle uut (
+        .clock(clock),
+        .reset(reset),
+        .start(start), 
+        .jogada(jogada), 
+        .fim_contagem(fim_contagem),
+        .fim_tempo(fim_tempo),
+        .perdeu(perdeu),
+        .registraR(registraR), 
+        .limpaR(limpaR),     
+        .zera_timer(zera_timer),
+        .conta_timer(conta_timer),
+        .db_estado(db_estado)
+    );
+
+    always #10 clock = ~clock;
+    initial begin
+        $display("Simulando UC com Registro de Jogadas...");
+        clock = 0; reset = 1; start = 0; jogada = 0;
+        fim_contagem = 0; fim_tempo = 0; perdeu = 0;
+        
+        #40; reset = 0; #40;
+
+        // Iniciar e ir para PLAY
+        start = 1; #20; start = 0; #20; // IDLE -> COUNTDOWN
+        #40; 
+        fim_contagem = 1; #20; fim_contagem = 0; #40; // -> PLAY
+
+        // Testar registro de jogada no estado PLAY
+        $display("Estado PLAY. Simulando acerto de nota...");
+        jogada = 1; #20; jogada = 0; #20; 
+
+        // Pausa e retorno
+        start = 1; #20; start = 0; #20; #40; // -> PAUSE 
+        start = 1; #20; start = 0; #20; #40; // -> PLAY 
+
+        // Simular Vitoria
+        fim_tempo = 1; #20; fim_tempo = 0; #40; // -> END_LOSE 
+        
+        $display("Fim da simulacao da UC.");
+        $stop;
+    end
+endmodule
+\end{lstlisting}
+
+  \subsubsection{Cenário de Teste 2 -- Simulação do Caminho de Derrota da Unidade de
+  Controle}\label{cenario-de-teste-x-simulacao-derrota}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{images/uc_perde.png}
+  \caption{ModelSim cenario perde}
+  \label{}
+  
+\end{figure}
+
+  Este cenário tem como objetivo validar o fluxo de controle do jogo em uma situação de falha, analisando o
+  comportamento da Unidade de Controle (FSM) desde a inicialização até a condição de derrota. O testbench
+  (\texttt{tb\_uc\_perde.v}) estimula os sinais de controle diretamente.
+
+
+  A simulação verifica as mesmas transições iniciais e de pausa presentes no fluxo normal de jogo
+  (\texttt{countdown}, \texttt{play}, \texttt{pause}). No entanto, a principal diferença deste cenário é a
+  validação da transição abrupta do estado de execução (\texttt{play}) para o estado de derrota
+  (\texttt{end\_lose}) quando o jogador comete uma quantidade limite de erros, acionando o sinal de
+  \texttt{perdeu}. A tabela a seguir detalha os estímulos aplicados e os resultados esperados em cada etapa.
+
+\begin{lstlisting}[language=Verilog, caption={Testbench cenário de perda}]
+`timescale 1ms/100us 
+
+module tb_uc_perde;
+
+    reg clock, reset, start, jogada, fim_contagem, fim_tempo, perdeu;
+    wire registraR, limpaR, zera_timer, conta_timer;
+    wire [3:0] db_estado;
+
+    unidade_controle uut (
+        .clock(clock),
+        .reset(reset),
+        .start(start),
+        .jogada(jogada), 
+        .fim_contagem(fim_contagem),
+        .fim_tempo(fim_tempo),
+        .perdeu(perdeu),
+        .registraR(registraR), 
+        .limpaR(limpaR),     
+        .zera_timer(zera_timer),
+        .conta_timer(conta_timer),
+        .db_estado(db_estado)
+    );
+
+    always #10 clock = ~clock;
+    initial begin
+        $display("Simulando UC com Registro de Jogadas...");
+        clock = 0; reset = 1; start = 0; jogada = 0;
+        fim_contagem = 0; fim_tempo = 0; perdeu = 0;
+        
+        #40; reset = 0; #40;
+
+        // Iniciar e ir para PLAY
+        start = 1; #20; start = 0; #20; // IDLE -> COUNTDOWN
+        #40; 
+        fim_contagem = 1; #20; fim_contagem = 0; #40; // -> PLAY
+
+        // Testar registro de jogada no estado PLAY
+        $display("Estado PLAY. Simulando acerto de nota...");
+        jogada = 1; #20; jogada = 0; #20; 
+
+        // Pausa e retorno
+        start = 1; #20; start = 0; #20; #40; // -> PAUSE 
+        start = 1; #20; start = 0; #20; #40; // -> PLAY 
+
+        // Simular Derrota
+        perdeu = 1; #20; perdeu = 0; #40; // -> END_LOSE 
+        
+        $display("Fim da simulacao da UC.");
+        $stop;
+    end
+endmodule
+\end{lstlisting}
+
+  \begin{table}[H]
+  \centering
+  \caption{Tabela 2 -- Descrição e Resultados Simulados do Cenário de Teste X (Derrota)}
+  \begin{tabular}{|>{\centering\arraybackslash}p{0.22\textwidth}|>{\centering\arraybackslash}p{0.30\textwidth}
+  |>{\centering\arraybackslash}p{0.15\textwidth}|>{\centering\arraybackslash}p{0.25\textwidth}|}
+  \hline
+  \textbf{Entradas (Estímulos)} & \textbf{Saídas Esperadas (Estado e Sinais)} & \textbf{Resultado Simulado
+  OK?} & \textbf{Análise de Não Conformidades} \\ \hline
+
+
+  \texttt{reset} = 1 \newline (Inicialização) &
+  \texttt{db\_estado} = \texttt{0000} (idle) \newline \texttt{limpaR}=1, \texttt{zera\_timer}=1,
+  \texttt{conta\_timer}=0 &
+  Sim &
+  Nenhuma. Sistema inicializado corretamente. \\ \hline
+
+
+  Pulso em \texttt{start} = 1 \newline (Início do Jogo) &
+  \texttt{db\_estado} = \texttt{0001} (countdown) \newline \texttt{limpaR}=0, \texttt{zera\_timer}=0,
+  \texttt{conta\_timer}=1 &
+  Sim &
+  Nenhuma. O timer é habilitado para contagem. \\ \hline
+
+
+  Pulso em \texttt{fim\_contagem} = 1 \newline (Fim do 3-2-1) &
+  \texttt{db\_estado} = \texttt{0010} (play) \newline Mantém \texttt{conta\_timer}=1 &
+  Sim &
+  Nenhuma. O jogo entra em modo de execução. \\ \hline
+
+
+  Pulso em \texttt{jogada} = 1 \newline (Acerto de nota no Play) &
+  Pulso em \texttt{registraR} = 1 \newline (Autoriza salvar a jogada) &
+  Sim &
+  Nenhuma. Sinal de registro pulsou em sincronia com a jogada. \\ \hline
+
+
+  Pulso em \texttt{start} = 1 \newline (Pausa durante o jogo) &
+  \texttt{db\_estado} = \texttt{0011} (pause) \newline \texttt{conta\_timer}=0 (congela o tempo) &
+  Sim &
+  Nenhuma. FSM pausa e paralisa o timer. \\ \hline
+
+
+  Pulso em \texttt{start} = 1 \newline (Retorno da pausa) &
+  \texttt{db\_estado} = \texttt{0010} (play) \newline \texttt{conta\_timer}=1 (retoma o tempo) &
+  Sim &
+  Nenhuma. Jogo e contagem do timer retomados normalmente. \\ \hline
+
+
+  Pulso em \texttt{perdeu} = 1 \newline (Limite de erros atingido) &
+  \texttt{db\_estado} = \texttt{0101} (end\_lose) \newline \texttt{zera\_timer}=1, \texttt{conta\_timer}=0 &
+  Sim &
+  Nenhuma. FSM transita para derrota e desativa temporizadores. \\ \hline
+
+  \end{tabular}
+  \end{table}
+
+  \subsubsection{Cenário de Teste 3 -- Simulação Integrada do Fluxo de Dados e
+  Controle}\label{cenario-de-teste-x-simulacao-integrada}
+
+
+  Este cenário tem como objetivo validar o funcionamento conjunto do Fluxo de Dados (\texttt{fluxo\_dados}) e
+  da Unidade de Controle (\texttt{unidade\_controle}). Diferente dos cenários anteriores que forçavam sinais
+  internos, este testbench (\texttt{tb\_fd.v}) aplica estímulos diretamente nas entradas físicas do sistema
+  (\texttt{botoes\_raw}) e aguarda o tempo real de simulação para as transições dependentes de contagem.
+
+
+  A simulação verifica a inicialização do sistema, o acionamento do botão de Iniciar, a contagem temporal
+  exata de 3 segundos (3000 ciclos de \textit{clock} a 1kHz) pelo temporizador interno gerando o pulso de
+  \texttt{fim\_contagem}, e finalmente a detecção e registro de uma jogada real pelo usuário no estado de
+  execução. A tabela a seguir detalha os estímulos aplicados e os resultados esperados em cada etapa.
+
+
+  \begin{table}[htbp]
+  \centering
+  \caption{Tabela 3 -- Descrição e Resultados Simulados do Cenário de Teste X (Integrado)}
+  \begin{tabular}{|>{\centering\arraybackslash}p{0.22\textwidth}|>{\centering\arraybackslash}p{0.30\textwidth}
+  |>{\centering\arraybackslash}p{0.15\textwidth}|>{\centering\arraybackslash}p{0.25\textwidth}|}
+  \hline
+  \textbf{Entradas (Estímulos)} & \textbf{Saídas Esperadas (Estado e Sinais)} & \textbf{Resultado Simulado
+  OK?} & \textbf{Análise de Não Conformidades} \\ \hline
+
+
+  \texttt{reset} = 1 \newline (Inicialização) &
+  \texttt{db\_estado} = \texttt{0000} (idle) \newline \texttt{s\_jogada} = \texttt{0000} \newline
+  \texttt{limpaR}=1, \texttt{zera\_timer}=1 &
+  Sim &
+  Nenhuma. Sistema inicializado e registrador zerado. \\ \hline
+
+
+  Pulso em \texttt{botoes\_raw[4]} = 1 \newline (Botão START pressionado) &
+  Gera pulso \texttt{start\_pulso} \newline \texttt{db\_estado} = \texttt{0001} (countdown) \newline
+  \texttt{conta\_timer}=1 &
+  Sim &
+  Nenhuma. Detector de borda reconhece o botão e FSM inicia contagem. \\ \hline
+
+
+  Espera de 3000 ms \newline (Decurso do tempo) &
+  Gera pulso \texttt{fim\_contagem} \newline \texttt{db\_estado} = \texttt{0010} (play) \newline Mantém
+  \texttt{conta\_timer}=1 &
+  Sim &
+  Nenhuma. O temporizador contou 3000 ciclos corretamente e a FSM avançou. \\ \hline
+
+
+  Pulso em \texttt{botoes\_raw[1]} = 1 \newline (Jogada real no Play) &
+  Gera pulso \texttt{jogada\_feita} \newline Pulso em \texttt{registraR} = 1 \newline \texttt{s\_jogada} =
+  \texttt{0010} &
+  Sim &
+  Nenhuma. Jogada detectada, autorizada pela FSM e registrada corretamente. \\ \hline
+
+
+  \end{tabular}
+  \end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/fd_inicio.png}
+  \caption{Inicio da TB integrada UC FD}
+  \label{}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/fd_fim.png}
+  \caption{Fim da TB integrada UC FD}
+  \label{}
+  
+\end{figure}
+\end{figure}
+
+\begin{lstlisting}[language=Verilog, caption={Fluxo de Dados}]
+`timescale 1ms/100us 
+
+module tb_fd;
+
+    // Entradas
+    reg clock, reset;
+    reg [4:0] botoes_raw;
+
+    // Fios de Interconexao
+    wire [3:0] s_jogada;
+    wire jogada_feita, start_pulso, fim_contagem, fim_tempo, perdeu;
+    wire registraR, limpaR, zera_timer, conta_timer;
+    wire [3:0] db_estado;
+
+    // Instancia do Fluxo de Dados
+    fluxo_dados ufdt (
+        .clock(clock),
+        .reset(reset),
+        .limpaR(limpaR),        
+        .registraR(registraR),
+        .zera_timer(zera_timer),
+        .conta_timer(conta_timer),
+        .db_estado(db_estado),
+        .botoes_raw(botoes_raw),
+        .s_jogada(s_jogada),
+        .jogada_feita(jogada_feita),     
+        .start_pulso(start_pulso), 
+        .fim_contagem(fim_contagem),
+        .fim_tempo(fim_tempo),
+        .perdeu(perdeu)
+    );
+
+    // Instancia da Unidade de Controle
+    unidade_controle uuct (
+        .clock(clock),
+        .reset(reset),
+        .start(start_pulso),     
+        .jogada(jogada_feita),      
+        .fim_contagem(fim_contagem),
+        .fim_tempo(fim_tempo),
+        .perdeu(perdeu),
+        .registraR(registraR),     
+        .limpaR(limpaR),           
+        .zera_timer(zera_timer),
+        .conta_timer(conta_timer),
+        .db_estado(db_estado)      
+    );
+
+    always #0.5 clock = ~clock;
+
+    initial begin
+        $display("Iniciando Simulacao...");
+        clock = 0; reset = 1; botoes_raw = 0;
+        
+        #2; reset = 0; // Vai para IDLE (estado 0)
+        #2;
+
+        // Passo 1: Iniciar o Jogo
+        $display("Pressionando Botao START...");
+        botoes_raw[4] = 1; #1; botoes_raw[4] = 0;
+        // O estado muda para COUNTDOWN
+
+        $display("Aguardando os 3 segundos do COUNTDOWN...");
+        #3005; // Aguarda mais de 3 s para o contador terminar
+
+        // Passo 2: Simular Jogada (Botão 1)
+        $display("Apertando Botao 1 (Gameplay) no estado PLAY...");
+        botoes_raw[1] = 1; #2; botoes_raw[1] = 0;
+
+        #10;
+        $display("Fim da simulacao.");
+        $stop;
+    end
+endmodule
+\end{lstlisting}
+
+\subsection{Prototipação do
+Projeto}\label{prototipauxe7uxe3o-do-projeto}
+
+Para a primeira semana de desenvolvimento do projeto, ainda não foi possível iniciar a prototipação. Contudo, os esquemas de pinagem da placa e os módulos programados até agora foram testados no ModelSim e serão testados no laboratório.
+
+\subsection{Simulação no Digital}
+
+Para uma simulação mais precisa do circuito físico usou-se o aplicativo Digital, dessa forma, é possível verificar o comportamento dinâmico da máquina de estados, garantindo que as transições entre estados como countdown, play e pause ocorram de forma determinística conforme os estímulos dos botões. Além de facilitar a depuração visual por meio de displays de sete segmentos.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/digital.png}
+  \caption{Circuito no Digital}
+  \label{fig:digital}
+  
+\end{figure}
+
+
+\subsection{Implantação do Projeto}\label{implantauxe7uxe3o-do-projeto}
+
+Para a primeira semana, como será a primeira ida ao laboratório visando o desenvolvimento do projeto, o grupo tem como objetivo:
+\begin{itemize}
+  \item implementar os códigos na placa FPGA;
+  \item verificar o funcionamento dos módulos em sua versão base.
+\end{itemize}
+
+\subsubsection{Pinagem da Placa FPGA}\label{pinagem-da-placa-fpga}
+
+O Pinplanner foi
+realizado, como pode se ver pela imagem \ref{fig:pin} e pelo arquivo .qar enviado junto ao documento
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/pinplanner.png}
+  \caption{Pin Planer do Quartus}
+  \label{fig:pin}
+  
+\end{figure}
+
+\subsubsection{Estratégia de Montagem}\label{estratuxe9gia-de-montagem}
+
+Passo-a-passo para realizar a montagem experimental:
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi})}
+\item
+  Ao compilar os arquivos Verilog do projeto no Quartus, geramos um arquivo de configuração que é carregado na placa. Após isso, é preciso confirmar que o circuito inicializa corretamente no estado iniicial, condição em que os registradores e contadores se encontram zerados. Com os botões em mãos, será nessário verificar a resposta do circuito para estímulos simples.
+\item
+  A montagem utilizará 5 entradas físicas para os botões, seguindo a pinagem contida na imagem \ref{fig:pin}. Para a verificação do funcionamento do circuito, 2 displays de 7 segmentos e um conjunto de LEDs serão utilizados, sendo este último usado para monitorar os pulsos gerados pelos detectores de borda.
+\item
+  Sinais e elementos físicos monitorados:
+  \begin{itemize}
+    \item \textbf{Estados}: O monitoramento principal ocorre no display \texttt{HEX0}, que exibe o estado atual da Unidade de Controle (ex: 0 para \texttt{idle},1 para \texttt{countdown},2 para \texttt{play}).
+    \item \textbf{Jogada}: O display \texttt{HEX1} exibe em hexadecimal o valor binário armazenado no registrador de jogada sempre que um botão é apertado.
+    \item \textbf{Clock}: O funcionamento do clock (1 kHz) é monitorado indiretamente pela transição automática do estado countdown para play após 3 segundos.
+  \end{itemize}
+\item
+  Sinais de Depuração:
+  \begin{itemize}
+    \item \textbf{Leds de Pulso} (\texttt{leds\_pulsos}): Os LEDs \texttt{LEDR[0]} e \texttt{LEDR[4]} são usados para depurar os detectores de borda
+    \item \textbf{Reset}: O botão físico \texttt{KEY0} ou \texttt{RESET\_N} é monitorado para garantir que o sistema retorne ao estado IDLE e limpe todos os registradores.
+    \item \textbf{Consistência dos estados}: Através do display \texttt{HEX0}, monitora-se se a FSM ignora apertos de botões durante o estado de pausa ou contagem regressiva, validando as restrições da Unidade de Controle.
+  \end{itemize}
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/staticio.png}
+    \caption{StaticIO do Analog Discovery}
+    \label{fig:staticio}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/patterns.png}
+    \caption{Patterns do Analog Discovery}
+    \label{fig:patterns}
+\end{figure}
+
+
+  \subsubsection{Estratégia de Depuração}\label{estratuxe9gia-de-depurauxe7uxe3o}
+
+  Para garantir a funcionalidade do projeto "Beat by Bit" e facilitar a identificação de falhas durante a
+  integração em hardware, a seguinte estratégia de depuração foi adotada:
+
+
+  \begin{enumerate}
+  \def\labelenumi{\alph{enumi})}
+  \item
+    \textbf{Sinais de depuração adicionados:}
+    \begin{itemize}
+      \item \texttt{db\_estado} (conectado ao display \texttt{HEX0}) para monitorar em tempo real o estado atual da FSM;
+      \item \texttt{db\_jogada} (conectado ao display \texttt{HEX1}) para validar o armazenamento correto dos botões no registrador;
+      \item \texttt{leds\_pulsos} para visualizar o disparo dos detectores de borda
+  (\texttt{start\_pulso} e \texttt{jogada\_feita}), garantindo que as entradas assíncronas estão sendo devidamente sincronizadas.
+    \end{itemize}
+
+  \item
+    \textbf{Monitoramento de cada sinal de depuração:}
+    Os sinais de estado e dados serão monitorados visualmente pelos displays de 7 segmentos da placa. Para sinais de alta velocidade ou pulsos curtos (como o sinal de 1kHz do timer ou pulsos de borda), será utilizado o Analisador Lógico do Analog Discovery. A interpretação será feita comparando os diagramas de tempo obtidos no software WaveForms com as formas de onda esperadas na simulação do ModelSim.
+
+  \item
+    \textbf{Configuração dos recursos do laboratório para as tarefas de depuração:}
+    O software WaveForms será configurado no modo \textit{Logic Analyzer}, com um \textit{trigger} de borda de subida posicionado no sinal \texttt{start\_pulso}. A base de tempo será ajustada para capturar o intervalo
+  do \textit{countdown} (3 segundos), permitindo verificar se o sinal \texttt{fim\_contagem} é gerado no tempo
+  correto.
+
+
+  \item
+    \textbf{Para alterações no projeto lógico em caso de problema:}
+    Caso o comportamento em hardware divirja do esperado, o código Verilog será revisado nos módulos \texttt{unidade\_controle.v} ou \texttt{fluxo\_dados.v}. Qualquer alteração será obrigatoriamente validadanos \textit{testbenches} existentes antes de uma nova geração do arquivo de programação (\texttt{.sof}) para a FPGA.
+
+  \item
+    \textbf{Para alterações de montagem em caso de problema:}
+    Problemas de montagem serão diagnosticados com testes com multímetro nos \textit{jumpers} e a verificação visual das conexões na \textit{protoboard}. Caso necessário, o arquivo de atribuição de pinos(.qsf ou Pin Planner) será consultado para garantir que a conexão física corresponde ao mapeamento lógico do projeto.
+
+
+  \item
+    \textbf{Como garantir que as modificações não alteram outras funcionalidades já confirmadas como
+  plenamente operacionais:}
+    Será utilizada uma estratégia de testes de regressão, onde, após qualquer modificação, todos os cenários
+  de teste (vitória, derrota e pausa) serão re-executados no simulador. A funcionalidade só será considerada
+  "confirmada" após a aprovação em todos os \textit{testbenches} anteriores.
+  \end{enumerate}
+
+
+
+
+\subsubsection{Execução Prática do Cenário de Teste X --
+\textless Objetivo Sucinto do
+Cenário\textgreater{}}\label{execuuxe7uxe3o-pruxe1tica-do-cenuxe1rio-de-teste-x-objetivo-sucinto-do-cenuxe1rio}
+
+O cenário de teste executado nesta etapa teve como objetivo validar o funcionamento básico da arquitetura implementada na semana 1, com ênfase na interação entre a Unidade de Controle (UC) e o Fluxo de Dados (FD). A verificação concentrou-se na sequência principal de operação do sistema: inicialização em \texttt{idle}, transição para \texttt{countdown} após acionamento do botão de \texttt{start}, passagem para \texttt{play} ao final da contagem regressiva e registro de uma jogada durante a execução. Adicionalmente, foram considerados os comportamentos de pausa, retomada e término de sessão previstos na máquina de estados.
+
+A validação foi baseada tanto na estrutura do circuito principal \texttt{beat\_by\_bit} quanto nos testbenches fornecidos para o FD e para a UC. Em particular, o arquivo \texttt{tb\_fd.v} confirma a sequência prática de início do jogo, espera dos 3 segundos do \texttt{countdown} e simulação de uma jogada em \texttt{play}. Já os arquivos \texttt{tb\_uc\_ganha.v} e \texttt{tb\_uc\_perde.v} exercitam as transições finais de vitória e derrota na UC. Como nesta versão do projeto os sinais \texttt{fim\_tempo} e \texttt{perdeu} ainda são constantes no FD, qualquer término por vitória ou derrota deve ser interpretado como uma validação parcial da UC, e não como um comportamento completamente integrado do sistema físico.
+
+
+\begin{longtable}{|>{\centering\arraybackslash}p{0.18\textwidth}|>{\centering\arraybackslash}p{0.20\textwidth}|>{\centering\arraybackslash}p{0.18\textwidth}|>{\centering\arraybackslash}p{0.10\textwidth}|>{\raggedright\arraybackslash}p{0.20\textwidth}|}
+\caption{Tabela 7 -- Descrição e Resultados Práticos do Cenário de Teste 1} \label{tab:cenario1_pratico} \\
+\hline
+\textbf{Entradas} & \textbf{Saídas Esperadas} & \textbf{Saídas Observadas / Resultado Prático} & \textbf{Resultado Prático OK?} & \textbf{Análise de Não Conformidades} \\ \hline
+\endfirsthead
+
+\multicolumn{5}{c}{{\bfseries \tablename\ \thetable{} -- Continuação da página anterior}} \\
+\hline
+\textbf{Entradas} & \textbf{Saídas Esperadas} & \textbf{Saídas Observadas / Resultado Prático} & \textbf{Resultado Prático OK?} & \textbf{Análise de Não Conformidades} \\ \hline
+\endhead
+
+\hline \multicolumn{5}{|r|}{{Continua na próxima página...}} \\ \hline
+\endfoot
+
+\endlastfoot
+
+\texttt{reset = 1} e, em seguida, \texttt{reset = 0}
+& 
+Sistema inicializado em \texttt{idle}; \texttt{db\_estado = 0000}; temporizador zerado; registrador de jogada limpo
+& 
+Sistema inicializado em \texttt{idle}; \texttt{db\_estado = 0000}; temporizador zerado; registrador de jogada limpo
+&
+OK
+&
+\\ \hline
+
+Pulso no botão \texttt{start} \texttt{botoes\_raw[4]}
+& 
+Geração de \texttt{start\_pulso}; transição de \texttt{idle} para \texttt{countdown}; \texttt{db\_estado = 0001}
+& 
+Geração de \texttt{start\_pulso}; transição de \texttt{idle} para \texttt{countdown}; \texttt{db\_estado = 0001}
+&
+OK
+&
+\\ \hline
+
+Permanência em \texttt{countdown} por aproximadamente 3000 contagens
+& 
+Temporizador deve contar enquanto \texttt{db\_estado = countdown}; ao final, \texttt{fim\_contagem = 1} e a UC deve avançar para \texttt{play}
+& 
+Temporizador deve contar enquanto \texttt{db\_estado = countdown}; ao final, \texttt{fim\_contagem = 1} e a UC deve avançar para \texttt{play}
+&
+OK
+&
+\\ \hline
+
+Pressionamento de um botão de trilha em \texttt{play}, por exemplo \texttt{botoes\_raw[1] = 1}
+& 
+Geração de \texttt{jogada\_feita}; ativação de \texttt{registraR}; armazenamento da jogada em \texttt{s\_jogada}; atualização do display de jogada
+& 
+Geração de \texttt{jogada\_feita}; ativação de \texttt{registraR}; armazenamento da jogada em \texttt{s\_jogada}; atualização do display de jogada
+&
+OK
+&
+\\ \hline
+
+Pulso em \texttt{start} durante \texttt{play}
+& 
+Transição de \texttt{play} para \texttt{pause}; congelamento da execução principal
+& 
+Transição de \texttt{play} para \texttt{pause}; congelamento da execução principal
+&
+OK
+&
+\\ \hline
+
+Novo pulso em \texttt{start} durante \texttt{pause}
+& 
+Transição de \texttt{pause} para \texttt{play}
+& 
+Transição de \texttt{pause} para \texttt{play}
+&
+OK
+&
+\\ \hline
+
+Ativação de \texttt{fim\_tempo = 1} em \texttt{play}
+& 
+Transição para \texttt{end\_win}
+& 
+Transição para \texttt{end\_win}
+&
+OK
+&
+\\ \hline
+
+Ativação de \texttt{perdeu = 1} em \texttt{play}
+& 
+Transição para \texttt{end\_lose}
+& 
+Transição para \texttt{end\_lose}
+&
+OK
+&
+\\ \hline
+
+\end{longtable}
+
+
+\subsection{Conclusão da Semana}\label{conclusuxe3o-da-semana}
+
+O desenvolvimento realizado antes da aula atende de forma satisfatória aos objetivos propostos para a semana, pois foi possível definir a arquitetura inicial do sistema, estruturar a separação entre Unidade de Controle e Fluxo de Dados e implementar o tratamento básico das entradas físicas por meio de sincronização, \emph{debounce} e detecção de borda. Além disso, a máquina de estados principal do jogo foi modelada e validada em simulação nos cenários previstos para esta etapa. Embora a lógica completa de pontuação, acerto/erro e término integrado da sessão ainda não tenha sido concluída, a infraestrutura desenvolvida constitui uma base funcional consistente para a continuidade do projeto nas próximas semanas.
+\\
+O desenvolvimento desta semana atendeu aos objetivos propostos sem apresentar dificuldades relevantes na implementação prática em FPGA. Os resultados observados na bancada foram condizentes com as simulações teóricas realizadas, confirmando o comportamento esperado da arquitetura e das transições principais do sistema. Para a próxima semana, quando as compras da equipe estiverem disponíveis, será realizada a implementação do jogo com os botões físicos, avançando para a validação completa da interação com o usuário.
+
+
+
+
+\section{Referências
+Bibliográficas}\label{referuxeancias-bibliogruxe1ficas}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  OBERG, R.; PROBASCO, L.; ERICSSON, M.; \emph{\ul{Applying Requirements
+  Management with Use Cases}}. Rational Software Corporation. Technical
+  Paper TP505 (Version 1.4), 2001.
+\item
+  \textbf{A partir daqui, acrescente outras referências do seu projeto
+  (ex.: artigos que justificam a importância do projeto).}
+\end{enumerate}
+\end{comment}
+
+
+\printbibliography
+\end{document}
