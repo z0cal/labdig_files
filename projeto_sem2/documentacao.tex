@@ -1,0 +1,892 @@
+% ============================================================
+%  Beat by Bit — Documentação Técnica (Semestre 2)
+%  Compilar com: pdflatex documentacao.tex
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+
+% ── Pacotes ────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{mdframed}
+
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+\geometry{
+    top=2.5cm, bottom=2.5cm,
+    left=2.5cm, right=2.5cm,
+    headheight=14.5pt
+}
+
+% ── Cores do projeto ───────────────────────────────────────
+\definecolor{fpgablue}{RGB}{0, 102, 204}
+\definecolor{pygreen}{RGB}{0, 150, 70}
+\definecolor{uartred}{RGB}{200, 50, 50}
+\definecolor{codegray}{RGB}{245, 245, 245}
+\definecolor{codeframe}{RGB}{180, 180, 180}
+\definecolor{darkgray}{RGB}{60, 60, 60}
+\definecolor{notecolor}{RGB}{255, 220, 0}
+
+% ── Estilo de código ───────────────────────────────────────
+\lstdefinestyle{verilog}{
+    backgroundcolor=\color{codegray},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{fpgablue}\bfseries,
+    commentstyle=\color{darkgray}\itshape,
+    stringstyle=\color{uartred},
+    numberstyle=\tiny\color{darkgray},
+    numbers=left,
+    numbersep=8pt,
+    tabsize=4,
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    morekeywords={module, endmodule, input, output, wire, reg, always,
+                  posedge, negedge, begin, end, if, else, case, endcase,
+                  assign, parameter, localparam, integer, for, task,
+                  endtask, function, endfunction},
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+}
+
+\lstdefinestyle{python}{
+    backgroundcolor=\color{codegray},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{pygreen}\bfseries,
+    commentstyle=\color{darkgray}\itshape,
+    stringstyle=\color{uartred},
+    numberstyle=\tiny\color{darkgray},
+    numbers=left,
+    numbersep=8pt,
+    tabsize=4,
+    breaklines=true,
+    showstringspaces=false,
+    language=Python,
+}
+
+\lstdefinestyle{shell}{
+    backgroundcolor=\color{black!90},
+    frame=none,
+    basicstyle=\ttfamily\footnotesize\color{green!80!black},
+    breaklines=true,
+    showstringspaces=false,
+}
+
+% ── Cabeçalho ─────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{fpgablue}{\textbf{Beat by Bit}} — Documentação Técnica}
+\fancyhead[R]{\small Semestre 2}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Títulos ────────────────────────────────────────────────
+\titleformat{\section}{\large\bfseries\color{fpgablue}}{}{0em}{\thesection\quad}
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{\thesubsection\quad}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=fpgablue,
+    urlcolor=fpgablue,
+}
+
+% ── Documento ─────────────────────────────────────────────
+\begin{document}
+
+% ── Capa ──────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Huge\bfseries\textcolor{fpgablue}{Beat by Bit}}\\[0.5cm]
+    {\large Documentação Técnica — Semestre 2}\\[2cm]
+
+    \begin{mdframed}[linecolor=fpgablue, linewidth=2pt, innertopmargin=12pt, innerbottommargin=12pt]
+    \centering
+    \textbf{Resumo das mudanças}\\[6pt]
+    Migração da lógica do jogo do Python para a FPGA (Verilog).\\
+    O Python passou a funcionar exclusivamente como \emph{renderer},\\
+    recebendo o estado do jogo via UART em pacotes de 20 bytes a 60\,fps.
+    \end{mdframed}
+
+    \vspace{1.5cm}
+
+    \begin{tabular}{ll}
+        \textbf{Projeto anterior:} & \texttt{projeto\_sem1/} \\[4pt]
+        \textbf{Projeto atual:}    & \texttt{projeto\_sem2/} \\[4pt]
+        \textbf{FPGA:}             & Cyclone V (Intel/Altera) \\[4pt]
+        \textbf{Clock:}            & 50\,MHz (assumido) \\[4pt]
+        \textbf{UART:}             & 115200 baud, 8N1 \\[4pt]
+        \textbf{Simulador:}        & ModelSim / Icarus Verilog \\[4pt]
+        \textbf{Renderer:}         & Python 3 + Pygame \\
+    \end{tabular}
+
+    \vfill
+    {\small Laboratório de Circuitos Digitais}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════
+\section{Visão Geral}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{Objetivo}
+
+O projeto \textbf{Beat by Bit} é um jogo de ritmo implementado em FPGA. No semestre 1, toda a lógica do jogo — geração de notas, detecção de acerto, pontuação, temporizadores e condições de vitória — estava implementada em Python. A FPGA apenas transmitia o estado dos botões físicos para o computador.
+
+No semestre 2, a lógica foi \textbf{completamente migrada para o Verilog}, respeitando o requisito do trabalho: \emph{a FPGA deve ser o cérebro do jogo}. O Python passou a ser um \emph{renderer} puro — só recebe pacotes via UART e desenha a tela.
+
+\subsection{Divisão de responsabilidades}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{Xcc}
+\toprule
+\textbf{Funcionalidade} & \textbf{Sem.~1} & \textbf{Sem.~2} \\
+\midrule
+Geração de notas (spawn)         & Python & \textbf{FPGA} \\
+Posição e movimento das notas    & Python & \textbf{FPGA} \\
+Detecção de acerto (hit window)  & Python & \textbf{FPGA} \\
+Pontuação (score / combo)        & Python & \textbf{FPGA} \\
+Contador de erros (misses)       & Python & \textbf{FPGA} \\
+Timer de jogo (60\,s)            & Python & \textbf{FPGA} \\
+Countdown (3\,s)                 & Parcial & \textbf{FPGA} \\
+Condição de vitória/derrota      & Python & \textbf{FPGA} \\
+Máquina de estados (FSM)         & \textbf{FPGA} & \textbf{FPGA} \\
+Debounce e detecção de borda     & \textbf{FPGA} & \textbf{FPGA} \\
+Renderização gráfica             & Python & Python \\
+\bottomrule
+\end{tabularx}
+\caption{Comparação de responsabilidades entre os semestres.}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════
+\section{Arquitetura do Sistema}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{Diagrama de blocos}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.8cm,
+    box/.style={draw, rounded corners, minimum width=2.8cm, minimum height=0.9cm,
+                fill=codegray, font=\small},
+    newbox/.style={draw, rounded corners, minimum width=2.8cm, minimum height=0.9cm,
+                   fill=fpgablue!15, draw=fpgablue, font=\small},
+    label/.style={font=\footnotesize\itshape},
+    arr/.style={-{Latex}, thick},
+]
+
+% Bloco FPGA (grande)
+\node[box] (uc)  at (0,0)          {\texttt{unidade\_controle}};
+\node[box] (fd)  at (0,-1.8)       {\texttt{fluxo\_dados}};
+\node[newbox] (nt0) at (-3.5,-3.2) {\texttt{note\_track[0]}};
+\node[newbox] (nt1) at (-1.0,-3.2) {\texttt{note\_track[1]}};
+\node[newbox] (nt2) at ( 1.5,-3.2) {\texttt{note\_track[2]}};
+\node[newbox] (nt3) at ( 4.0,-3.2) {\texttt{note\_track[3]}};
+\node[newbox] (lfsr) at (-3.5,-4.8){\texttt{lfsr8}};
+\node[newbox] (pkt) at (4.5,-0.9)  {\texttt{packet\_sender}};
+\node[newbox] (utx) at (4.5,-2.4)  {\texttt{uart\_tx}};
+\node[box] (hex) at (0, 1.5)       {\texttt{hexa7seg ×2}};
+
+% PC
+\node[draw, fill=pygreen!15, draw=pygreen, rounded corners,
+      minimum width=2.8cm, minimum height=0.9cm, font=\small]
+      (py) at (4.5,-4.2) {\textbf{Python} (renderer)};
+
+% Entradas
+\node[label, left=1.2cm of uc] (btn) {botoes[4:0]};
+\node[label, left=1.2cm of fd] (clk) {clock, reset};
+
+% Setas
+\draw[arr] (btn.east) -- (uc.west);
+\draw[arr] (clk.east) -- (fd.west);
+\draw[arr] (uc) -- (fd) node[midway, right, label]{controle};
+\draw[arr] (fd.south) -- ++(0,-0.3) -| (nt0.north);
+\draw[arr] (fd.south) -- ++(0,-0.3) -| (nt1.north);
+\draw[arr] (fd.south) -- ++(0,-0.3) -| (nt2.north);
+\draw[arr] (fd.south) -- ++(0,-0.3) -| (nt3.north);
+\draw[arr] (lfsr.north) -- (nt0.south);
+\draw[arr, color=fpgablue] (fd.east) -- (pkt.west)
+      node[midway, above, label, color=fpgablue]{estado};
+\draw[arr, color=fpgablue] (pkt) -- (utx)
+      node[midway, right, label, color=fpgablue]{bytes};
+\draw[arr, color=uartred] (utx) -- (py)
+      node[midway, right, label, color=uartred]{UART};
+\draw[arr] (uc.north) -- (hex.south);
+
+% Bounding box FPGA
+\begin{scope}[on background layer]
+\node[draw=fpgablue, dashed, rounded corners=8pt, fill=fpgablue!5,
+      fit=(uc)(fd)(nt0)(nt3)(lfsr)(hex)(pkt)(utx),
+      label=above:{\textbf{\textcolor{fpgablue}{FPGA — Cyclone V}}}] {};
+\end{scope}
+
+\end{tikzpicture}
+\caption{Diagrama de blocos do sistema. Módulos novos destacados em azul.}
+\end{figure}
+
+\subsection{Hierarquia de módulos}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Arquivo} & \textbf{Descrição} & \textbf{Status} \\
+\midrule
+\texttt{projeto.v}          & Top-level; conecta todos os módulos  & Atualizado \\
+\texttt{unidade\_controle.v}& FSM principal do jogo (6 estados)    & Atualizado \\
+\texttt{fluxo\_dados.v}     & Lógica completa do jogo              & \textcolor{fpgablue}{\textbf{Reescrito}} \\
+\texttt{uart\_tx.v}         & Transmissor UART 8N1                 & \textcolor{fpgablue}{\textbf{Novo}} \\
+\texttt{lfsr8.v}            & LFSR 8 bits para spawn aleatório     & \textcolor{fpgablue}{\textbf{Novo}} \\
+\texttt{note\_track.v}      & Gerenciador de notas por trilha      & \textcolor{fpgablue}{\textbf{Novo}} \\
+\texttt{packet\_sender.v}   & Montagem e envio do pacote UART      & \textcolor{fpgablue}{\textbf{Novo}} \\
+\texttt{contador\_m.v}      & Contador modulo-M parametrizável     & Reutilizado \\
+\texttt{edge\_detector.v}   & Detector de borda de subida          & Reutilizado \\
+\texttt{registrador\_4.v}   & Registrador 4 bits com enable        & Reutilizado \\
+\texttt{hexa7seg.v}         & Decodificador para display 7 seg.    & Reutilizado \\
+\texttt{interface.py}       & Renderer Python (Pygame)             & \textcolor{pygreen}{\textbf{Reescrito}} \\
+\bottomrule
+\end{tabularx}
+\caption{Hierarquia e status dos arquivos do projeto.}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════
+\section{Protocolo UART}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{Configuração}
+
+\begin{itemize}
+    \item \textbf{Baud rate:} 115\,200 bps
+    \item \textbf{Formato:} 8N1 (8 bits de dados, sem paridade, 1 stop bit)
+    \item \textbf{Direção:} FPGA $\rightarrow$ PC (unidirecional)
+    \item \textbf{Taxa de envio:} 1 pacote por frame ($\approx$\,60\,fps)
+    \item \textbf{Tempo por pacote:} $20 \times \frac{10}{115200} \approx 1{,}74\,\text{ms}$
+\end{itemize}
+
+\subsection{Formato do pacote (20 bytes)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{cclc}
+\toprule
+\textbf{Byte(s)} & \textbf{Nome} & \textbf{Descrição} & \textbf{Valores} \\
+\midrule
+0  & \texttt{HEADER}     & Marcador de início                   & \texttt{0x55} \\
+1  & \texttt{state}      & Estado da FSM                        & 0--5 \\
+2  & \texttt{countdown}  & Segundos restantes no countdown      & 3, 2, 1, 0 \\
+3  & \texttt{t0n0}       & Trilha 0 — age da nota 0             & 0--150, \texttt{0xFF} \\
+4  & \texttt{t0n1}       & Trilha 0 — age da nota 1             & 0--150, \texttt{0xFF} \\
+5  & \texttt{t0n2}       & Trilha 0 — age da nota 2             & 0--150, \texttt{0xFF} \\
+6--8  & \texttt{t1n0--t1n2} & Trilha 1 (idem)                   & 0--150, \texttt{0xFF} \\
+9--11 & \texttt{t2n0--t2n2} & Trilha 2 (idem)                   & 0--150, \texttt{0xFF} \\
+12--14& \texttt{t3n0--t3n2} & Trilha 3 (idem)                   & 0--150, \texttt{0xFF} \\
+15 & \texttt{score\_h}   & Pontuação (byte alto)                & 0--255 \\
+16 & \texttt{score\_l}   & Pontuação (byte baixo)               & 0--255 \\
+17 & \texttt{misses}     & Contador de erros                    & 0--10 \\
+18 & \texttt{combo}      & Combo atual                          & 0--255 \\
+19 & \texttt{FOOTER}     & Marcador de fim                      & \texttt{0xAA} \\
+\bottomrule
+\end{tabular}
+\caption{Estrutura do pacote UART de 20 bytes. \texttt{0xFF} indica slot vazio.}
+\end{table}
+
+\subsection{Codificação de posição das notas}
+
+Cada nota é armazenada na FPGA como um contador de \emph{age} (quadros desde o spawn). O Python converte em posição $Y$ na tela pela fórmula:
+
+\begin{equation}
+    Y = \mathit{age} \times \mathit{NOTE\_SPEED} \qquad (\mathit{NOTE\_SPEED} = 4\ \text{px/frame})
+\end{equation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccl}
+\toprule
+\textbf{Age} & \textbf{Y (px)} & \textbf{Significado} \\
+\midrule
+0   & 0   & Nota acabou de aparecer (topo da tela) \\
+119 & 476 & Borda inferior da hit zone \\
+130 & 520 & Centro da hit zone \\
+141 & 564 & Borda superior da hit zone \\
+151 & 604 & Nota saiu da tela $\rightarrow$ miss \\
+\texttt{0xFF} & --- & Slot vazio (sem nota) \\
+\bottomrule
+\end{tabular}
+\caption{Mapeamento age $\rightarrow$ posição Y.}
+\end{table}
+
+\subsection{Estados da FSM (byte 1 do pacote)}
+
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+\textbf{Valor} & \textbf{Estado} & \textbf{Descrição} \\
+\midrule
+0 & \texttt{IDLE}      & Aguardando pressionar START \\
+1 & \texttt{COUNTDOWN} & Contagem regressiva 3-2-1 \\
+2 & \texttt{PLAY}      & Jogo em andamento \\
+3 & \texttt{PAUSE}     & Jogo pausado \\
+4 & \texttt{END\_WIN}  & Vitória (60\,s concluídos) \\
+5 & \texttt{END\_LOSE} & Derrota (10 erros) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════
+\section{Módulos Verilog Novos}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{\texttt{uart\_tx.v} — Transmissor UART}
+
+\textbf{Função:} Serializa um byte de 8 bits no formato 8N1 (1 start bit + 8 data bits + 1 stop bit).
+
+\textbf{Parâmetro:}
+\begin{itemize}
+    \item \texttt{CLKS\_PER\_BIT} $= \lfloor f_{clk} / \mathit{baud} \rfloor = \lfloor 50\,000\,000 / 115\,200 \rfloor = 434$
+\end{itemize}
+
+\textbf{Portas:}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Sinal} & \textbf{Direção} & \textbf{Descrição} \\
+\midrule
+\texttt{clock}     & entrada & Clock do sistema \\
+\texttt{reset}     & entrada & Reset assíncrono ativo alto \\
+\texttt{tx\_data[7:0]} & entrada & Byte a transmitir \\
+\texttt{tx\_valid} & entrada & Pulso de 1 ciclo para iniciar transmissão \\
+\texttt{tx\_serial}& saída   & Sinal serial de saída (pino UART TX) \\
+\texttt{tx\_ready} & saída   & \texttt{1} quando pronto para novo byte \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Diagrama de estados:}
+\begin{center}
+\begin{tikzpicture}[
+    state/.style={draw, circle, minimum size=1.8cm, font=\small},
+    arr/.style={-{Latex}, thick},
+]
+\node[state, fill=fpgablue!15] (idle)  at (0,0)   {\texttt{IDLE}};
+\node[state] (start) at (3,0)  {\texttt{START}};
+\node[state] (data)  at (6,0)  {\texttt{DATA}};
+\node[state] (stop)  at (9,0)  {\texttt{STOP}};
+\draw[arr] (idle)  -- (start) node[midway, above, font=\footnotesize]{\texttt{tx\_valid}};
+\draw[arr] (start) -- (data)  node[midway, above, font=\footnotesize]{fim bit};
+\draw[arr] (data)  -- (stop)  node[midway, above, font=\footnotesize]{8 bits};
+\draw[arr] (stop)  to[bend left=40] (idle)  node[midway, below, font=\footnotesize]{fim bit};
+\end{tikzpicture}
+\end{center}
+
+\subsection{\texttt{lfsr8.v} — Gerador Pseudoaleatório}
+
+\textbf{Função:} LFSR (\emph{Linear Feedback Shift Register}) de 8 bits para gerar spawn pseudoaleatório das notas.
+
+\textbf{Polinômio:} $x^8 + x^6 + x^5 + x^4 + 1$ \quad (taps nos bits 8, 6, 5, 4)
+
+\textbf{Propriedades:}
+\begin{itemize}
+    \item Período máximo de 255 estados (nunca retorna ao estado zero)
+    \item Avança 1 passo a cada pulso de \texttt{enable} (\texttt{frame\_tick})
+    \item Semente inicial: \texttt{0xAC}
+\end{itemize}
+
+\textbf{Uso no spawn:} O \texttt{fluxo\_dados} usa 2 bits do LFSR por trilha. Uma nota é spawnada se os 2 bits forem \texttt{00} (probabilidade $\approx 25\%$ por trilha por frame).
+
+\begin{lstlisting}[style=verilog, caption={Lógica de feedback do LFSR8.}]
+wire feedback = lfsr_reg[7] ^ lfsr_reg[5] ^ lfsr_reg[4] ^ lfsr_reg[3];
+lfsr_reg <= {lfsr_reg[6:0], feedback};  // shift left com feedback
+\end{lstlisting}
+
+\subsection{\texttt{note\_track.v} — Gerenciador de Notas por Trilha}
+
+\textbf{Função:} Mantém até 3 notas simultâneas numa trilha. Cada nota é representada por um contador de age (quadros desde o spawn).
+
+\textbf{Constantes de jogo:}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Constante} & \textbf{Valor} & \textbf{Significado} \\
+\midrule
+\texttt{HIT\_CENTER} & 130 & Age quando a nota está no centro da hit zone ($Y=520$) \\
+\texttt{HIT\_WINDOW} & 11  & Janela de tolerância $\pm11$ frames ($\pm44$\,px) \\
+\texttt{MISS\_AGE}   & 151 & Age em que a nota sai da tela sem ser apertada \\
+\texttt{EMPTY}       & \texttt{0xFF} & Slot vazio \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Lógica por \texttt{frame\_tick}:}
+\begin{enumerate}
+    \item Para todos os slots válidos: \texttt{age++}
+    \item Se \texttt{age >= 151}: marca \texttt{escape\_pulse=1}, libera slot
+    \item Se \texttt{spawn\_en} e há slot livre: cria nota com \texttt{age=0}
+\end{enumerate}
+
+\textbf{Lógica por \texttt{btn\_press}:}
+\begin{enumerate}
+    \item Procura nota com age dentro da janela $[119,\,141]$
+    \item Se encontrada: \texttt{hit\_pulse=1}, remove a nota
+    \item Caso contrário: \texttt{bad\_press=1}
+\end{enumerate}
+
+\textbf{Saídas de pulso} (duram exatamente 1 ciclo de clock):
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Sinal} & \textbf{Significado} \\
+\midrule
+\texttt{hit\_pulse}    & Botão pressionado dentro da janela → acerto \\
+\texttt{escape\_pulse} & Nota passou sem ser apertada → miss \\
+\texttt{bad\_press}    & Botão pressionado fora da janela → penalidade \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{\texttt{packet\_sender.v} — Montagem e Envio do Pacote}
+
+\textbf{Função:} A cada \texttt{frame\_tick}, captura o estado completo do jogo, monta o pacote de 20 bytes e envia byte a byte via \texttt{uart\_tx}.
+
+\textbf{Máquina de estados interna:}
+
+\begin{center}
+\begin{tikzpicture}[
+    state/.style={draw, rounded corners, minimum width=2cm, minimum height=0.8cm,
+                  fill=codegray, font=\small},
+    arr/.style={-{Latex}, thick},
+    node distance=0.8cm and 2cm,
+]
+\node[state, fill=fpgablue!15] (wait) {WAIT};
+\node[state, right=of wait] (load) {LOAD};
+\node[state, right=of load] (send) {SEND};
+\node[state, right=of send] (done) {DONE};
+
+\draw[arr] (wait) -- (load) node[midway, above, font=\tiny]{\texttt{frame\_tick}};
+\draw[arr] (load) -- (send) node[midway, above, font=\tiny]{\texttt{tx\_ready}};
+\draw[arr] (send) to[bend right=20] (load)
+    node[midway, below, font=\tiny]{próx. byte};
+\draw[arr] (send) -- (done) node[midway, above, font=\tiny]{byte 19};
+\draw[arr] (done) to[bend left=40] (wait)
+    node[midway, below, font=\tiny]{\texttt{tx\_ready}};
+\end{tikzpicture}
+\end{center}
+
+O estado \texttt{WAIT} captura (\emph{latch}) todos os sinais de entrada no momento do \texttt{frame\_tick}, garantindo consistência do pacote. O envio acontece nos estados seguintes sem risco de leitura de dados em transição.
+
+\subsection{\texttt{fluxo\_dados.v} — Lógica Completa do Jogo}
+
+Este módulo centraliza toda a lógica do jogo. Instancia os submódulos e mantém os registradores de estado.
+
+\textbf{Temporizadores:}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Temporizador} & \textbf{M} & \textbf{N (bits)} & \textbf{Duração} \\
+\midrule
+Frame tick (\texttt{u\_frame\_counter}) & 833\,333 & 20 & $\approx 1/60\,\text{s}$ \\
+Countdown (\texttt{u\_countdown})       & 180      & 8  & 3 segundos (180 frames) \\
+Timer de jogo (\texttt{u\_game\_timer}) & 3\,600   & 12 & 60 segundos \\
+\bottomrule
+\end{tabular}
+\caption{Temporizadores baseados em \texttt{contador\_m} instanciados no \texttt{fluxo\_dados}. Clock de 50\,MHz assumido.}
+\end{table}
+
+\textbf{Contadores de placar:}
+
+\begin{lstlisting}[style=verilog, caption={Lógica dos contadores de pontuação no \texttt{fluxo\_dados.v}.}]
+// Score (+100 acerto, -50 bad_press, minimo 0)
+always @(posedge clock or posedge reset)
+    if (reset || limpaR)    score_reg <= 0;
+    else if (any_hit)       score_reg <= score_reg + 16'd100;
+    else if (any_bad)       score_reg <= (score_reg >= 16'd50) ?
+                                         score_reg - 16'd50 : 16'd0;
+
+// Misses (nota escapa -> +1; perdeu quando >= 10)
+always @(posedge clock or posedge reset)
+    if (reset || limpaR)              miss_reg <= 0;
+    else if (any_escape && game_active) miss_reg <= miss_reg + 1;
+
+assign perdeu = (miss_reg >= 8'd10);
+
+// Combo (acerto -> +1; erro -> reset)
+always @(posedge clock or posedge reset)
+    if (reset || limpaR)             combo_reg <= 0;
+    else if (any_hit)                combo_reg <= combo_reg + 1;
+    else if (any_bad || any_escape)  combo_reg <= 0;
+\end{lstlisting}
+
+\subsection{\texttt{unidade\_controle.v} — FSM Principal}
+
+A FSM permaneceu com os mesmos 6 estados. A alteração foi a adição da saída \texttt{game\_active} (HIGH somente no estado \texttt{PLAY}), que habilita o movimento das notas e os contadores de placar no \texttt{fluxo\_dados}.
+
+\begin{center}
+\begin{tikzpicture}[
+    state/.style={draw, circle, minimum size=1.6cm, font=\footnotesize, align=center},
+    arr/.style={-{Latex}},
+    node distance=1.5cm,
+]
+\node[state, fill=codegray]     (idle) {IDLE\\0};
+\node[state, right=2cm of idle] (cd)   {COUNT\\DOWN\\1};
+\node[state, right=2cm of cd]   (play) {PLAY\\2};
+\node[state, right=2cm of play] (pause){PAUSE\\3};
+\node[state, below=1.8cm of play] (win){END\\WIN\\4};
+\node[state, below=1.8cm of cd]   (lose){END\\LOSE\\5};
+
+\draw[arr] (idle) -- (cd)   node[midway, above, font=\tiny]{START};
+\draw[arr] (cd)   -- (play) node[midway, above, font=\tiny]{fim\_contagem};
+\draw[arr] (play) to[bend right=20] (pause) node[midway, above, font=\tiny]{START};
+\draw[arr] (pause) to[bend right=20] (play) node[midway, below, font=\tiny]{START};
+\draw[arr] (play) -- (win)  node[midway, right, font=\tiny]{fim\_tempo};
+\draw[arr] (play) -- (lose) node[midway, left, font=\tiny]{perdeu};
+\draw[arr] (win)  to[bend left=30] (idle) node[near start, right, font=\tiny]{START};
+\draw[arr] (lose) to[bend right=30] (idle) node[near start, left, font=\tiny]{START};
+\end{tikzpicture}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════
+\section{Python — Renderer}
+% ═══════════════════════════════════════════════════════════
+
+O \texttt{interface.py} foi reescrito para ser um \emph{renderer} puro. Toda tomada de decisão de jogo foi removida.
+
+\subsection{Fluxo de dados}
+
+\begin{enumerate}
+    \item A thread \texttt{SerialReader} lê bytes da porta serial em background e os acumula em um buffer.
+    \item A cada frame, o loop principal chama \texttt{\_process\_serial()}, que drena o buffer e procura pacotes válidos usando \texttt{find\_packet()}.
+    \item Ao encontrar um pacote com header \texttt{0x55} e footer \texttt{0xAA}, o \texttt{parse\_packet()} extrai os campos.
+    \item O estado da FPGA é atualizado e a tela é renderizada de acordo.
+\end{enumerate}
+
+\subsection{Parser do pacote}
+
+\begin{lstlisting}[style=python, caption={Função \texttt{parse\_packet} em \texttt{interface.py}.}]
+def parse_packet(data, offset):
+    if data[offset] != 0x55 or data[offset + 19] != 0xAA:
+        return None
+    state     = data[offset + 1] & 0x0F
+    countdown = data[offset + 2]
+    notes = []
+    for t in range(4):
+        track = [data[offset + 3 + t*3 + s] * NOTE_SPEED
+                 for s in range(3)
+                 if data[offset + 3 + t*3 + s] != 0xFF]
+        notes.append(track)
+    score  = (data[offset + 15] << 8) | data[offset + 16]
+    misses = data[offset + 17]
+    combo  = data[offset + 18]
+    return {'state': state, 'countdown': countdown, 'notes': notes,
+            'score': score, 'misses': misses, 'combo': combo}
+\end{lstlisting}
+
+\subsection{Sincronização de pacotes}
+
+A função \texttt{find\_packet(buf)} varre o buffer em busca de um par \texttt{0x55 ... 0xAA} separados por exatamente 18 bytes. Isso garante ressincronização automática em caso de perda de bytes na UART.
+
+% ═══════════════════════════════════════════════════════════
+\section{Como Fazer Funcionar na Prática}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{Requisitos}
+
+\begin{itemize}
+    \item \textbf{Hardware:} Placa FPGA com Cyclone V (ex: DE1-SoC, DE2-115)
+    \item \textbf{Software FPGA:} Intel Quartus Prime (versão Lite é suficiente)
+    \item \textbf{Software PC:} Python 3.8+, Pygame, pyserial
+    \item \textbf{Cabo:} USB-A para mini/micro-USB (conexão UART da placa)
+\end{itemize}
+
+\subsection{Passo 1: Configurar o Projeto no Quartus}
+
+\begin{enumerate}
+    \item Abra o Quartus Prime e crie um novo projeto ou abra o \texttt{beat\_by\_bit.qar} existente.
+    \item \textbf{Adicione os novos arquivos Verilog} ao projeto (\textit{Project} $\rightarrow$ \textit{Add/Remove Files}):
+    \begin{itemize}
+        \item \texttt{uart\_tx.v}
+        \item \texttt{lfsr8.v}
+        \item \texttt{note\_track.v}
+        \item \texttt{packet\_sender.v}
+    \end{itemize}
+    \item Certifique-se de que \texttt{projeto.v} está definido como \textbf{Top-Level Entity}.
+    \item Verifique se o dispositivo está configurado para o Cyclone V correto (\textit{Assignments} $\rightarrow$ \textit{Device}).
+\end{enumerate}
+
+\subsection{Passo 2: Ajustar o Clock}
+
+O parâmetro \texttt{M} do contador de frame é calculado por:
+
+\begin{equation}
+    M_{\mathit{frame}} = \left\lfloor \frac{f_{clk}}{60} \right\rfloor
+\end{equation}
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Clock da placa} & \textbf{M (frame tick)} & \textbf{N (bits)} \\
+\midrule
+50\,MHz  & 833\,333 & 20 \\
+100\,MHz & 1\,666\,667 & 21 \\
+25\,MHz  & 416\,667  & 19 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Para verificar a frequência do clock da sua placa, consulte o manual ou o arquivo \texttt{c5\_pin\_model\_dump.txt}. Edite \texttt{fluxo\_dados.v} linha correspondente ao \texttt{u\_frame\_counter}:
+
+\begin{lstlisting}[style=verilog]
+contador_m #(.M(833_333), .N(20)) u_frame_counter  // 50 MHz
+\end{lstlisting}
+
+Da mesma forma, o parâmetro do \texttt{uart\_tx} deve ser ajustado:
+
+\begin{equation}
+    \mathtt{CLKS\_PER\_BIT} = \left\lfloor \frac{f_{clk}}{115200} \right\rfloor
+\end{equation}
+
+Edite \texttt{packet\_sender.v}:
+\begin{lstlisting}[style=verilog]
+uart_tx #(.CLKS_PER_BIT(434)) u_tx  // 50 MHz / 115200
+\end{lstlisting}
+
+\subsection{Passo 3: Atribuir os Pinos (Pin Planner)}
+
+Abra o \textit{Pin Planner} (\textit{Assignments} $\rightarrow$ \textit{Pin Planner}) e atribua:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Sinal no Verilog} & \textbf{Pino típico DE1-SoC} & \textbf{Descrição} \\
+\midrule
+\texttt{clock}         & PIN\_AF14      & Clock de 50\,MHz \\
+\texttt{reset}         & KEY[0]         & Botão de reset \\
+\texttt{botoes[0]}     & KEY[1]         & Trilha amarela (D) \\
+\texttt{botoes[1]}     & SW[0] ou KEY   & Trilha azul (F) \\
+\texttt{botoes[2]}     & SW[1] ou KEY   & Trilha verde (J) \\
+\texttt{botoes[3]}     & SW[2] ou KEY   & Trilha vermelha (K) \\
+\texttt{botoes[4]}     & KEY[3]         & START / PAUSE \\
+\texttt{uart\_tx\_out} & PIN do UART TX & TX da UART USB \\
+\texttt{db\_estado}    & HEX0[6:0]      & Display 7 segmentos \\
+\texttt{db\_jogada}    & HEX1[6:0]      & Display 7 segmentos \\
+\texttt{leds\_pulsos}  & LEDR[4:0]      & LEDs de debug \\
+\bottomrule
+\end{tabular}
+\caption{Atribuição de pinos para placa DE1-SoC. Ajuste conforme o manual da sua placa.}
+\end{table}
+
+\begin{mdframed}[linecolor=uartred, linewidth=1.5pt, innertopmargin=8pt, innerbottommargin=8pt]
+\textbf{Atenção — Pino UART TX:} O pino de TX da UART USB varia conforme a placa. Na DE1-SoC é geralmente ligado ao \textit{HPS UART}. Consulte o \textit{User Manual} da placa e o arquivo \texttt{c5\_pin\_model\_dump.txt} para localizar o pino correto. É possível também usar qualquer GPIO livre e conectar um adaptador USB-Serial externo.
+\end{mdframed}
+
+\subsection{Passo 4: Compilar e Gravar}
+
+\begin{lstlisting}[style=shell]
+# No Quartus: Processing -> Start Compilation
+# Verificar: 0 erros criticos no Flow Summary
+
+# Gravar na FPGA: Tools -> Programmer
+# Selecionar arquivo .sof gerado
+# Clicar em "Start"
+\end{lstlisting}
+
+\subsection{Passo 5: Instalar Dependências Python}
+
+\begin{lstlisting}[style=shell]
+cd /home/zocal/labdig_files/projeto_sem2
+
+# Ativar o ambiente virtual (se existir)
+source env/bin/activate
+
+# Instalar dependencias (caso necessario)
+pip install pygame pyserial
+\end{lstlisting}
+
+\subsection{Passo 6: Executar o Renderer}
+
+\begin{lstlisting}[style=shell]
+# Verificar a porta serial da FPGA
+ls /dev/ttyUSB*     # Linux
+# ou
+ls /dev/cu.usbserial*  # macOS
+
+# Executar
+python interface.py --port /dev/ttyUSB0 --baud 115200
+\end{lstlisting}
+
+\textbf{Parâmetros de linha de comando:}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Argumento} & \textbf{Padrão} & \textbf{Descrição} \\
+\midrule
+\texttt{--port} & \texttt{/dev/ttyUSB0} & Porta serial da FPGA \\
+\texttt{--baud} & \texttt{115200}       & Baud rate \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Indicadores visuais de status}
+
+No canto superior direito da tela, o renderer exibe:
+\begin{itemize}
+    \item \textcolor{pygreen}{\textbf{FPGA ON}} — conexão UART estabelecida
+    \item \textcolor{darkgray}{\textbf{FPGA OFF}} — sem conexão (modo demo, tela fica na última posição recebida)
+\end{itemize}
+
+\subsection{Solução de Problemas}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Sintoma} & \textbf{Solução} \\
+\midrule
+Tela permanece em IDLE &
+  Verificar se a FPGA está gravada e transmitindo. Testar com \texttt{minicom} ou \texttt{screen /dev/ttyUSB0 115200}. \\[6pt]
+Notas aparecem em posições erradas &
+  Verificar se o clock da FPGA é 50\,MHz. Se diferente, ajustar \texttt{M} no \texttt{fluxo\_dados.v}. \\[6pt]
+Jogo muito lento ou rápido &
+  O \texttt{NOTE\_SPEED} no Python deve ser igual ao usado no cálculo Verilog (ambos = 4). \\[6pt]
+\texttt{/dev/ttyUSB0} não existe &
+  Verificar driver USB-UART (\texttt{lsusb}), adicionar usuário ao grupo serial: \texttt{sudo usermod -aG dialout \$USER}. \\[6pt]
+Permissão negada na porta serial &
+  Executar \texttt{sudo chmod 666 /dev/ttyUSB0} ou adicionar ao grupo \texttt{dialout}. \\[6pt]
+Pacotes corrompidos / estado errado &
+  O \texttt{find\_packet} se ressincroniza automaticamente. Se persistir, verificar conexão do cabo e gravar novamente na FPGA. \\
+\bottomrule
+\end{tabularx}
+\caption{Solução de problemas comuns.}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════
+\section{Simulação e Testes}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{Testbenches disponíveis}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Arquivo} & \textbf{Módulo testado} & \textbf{Cenários cobertos} \\
+\midrule
+\texttt{tb\_uart\_tx.v}      & \texttt{uart\_tx}      & Envio de 0x55, 0xAA, 0xFF, 0x00; tx\_ready \\
+\texttt{tb\_lfsr8.v}         & \texttt{lfsr8}         & Nunca zero, período=255, freeze sem enable \\
+\texttt{tb\_note\_track.v}   & \texttt{note\_track}   & Spawn, acerto (borda inf/centro/borda sup), escape, bad\_press, 3 slots, overflow, game\_active=0 \\
+\texttt{tb\_packet\_sender.v}& \texttt{packet\_sender}& Todos os 20 bytes corretos, segundo pacote \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Executar com Icarus Verilog}
+
+\begin{lstlisting}[style=shell]
+cd /home/zocal/labdig_files/projeto_sem2
+
+# Todos os testbenches
+./run_tb.sh
+
+# Um testbench especifico
+./run_tb.sh tb_note_track
+\end{lstlisting}
+
+\subsection{Executar com ModelSim}
+
+\begin{lstlisting}[style=shell]
+# Compilar
+vlog uart_tx.v lfsr8.v note_track.v tb_note_track.v
+
+# Simular
+vsim tb_note_track
+
+# No console do ModelSim:
+run -all
+\end{lstlisting}
+
+\subsection{Visualizar formas de onda}
+
+Os testbenches geram arquivos \texttt{.vcd} que podem ser abertos no GTKWave:
+
+\begin{lstlisting}[style=shell]
+gtkwave tb_note_track.vcd &
+\end{lstlisting}
+
+Sinais recomendados para inspecionar em \texttt{tb\_note\_track.vcd}:
+\begin{itemize}
+    \item \texttt{frame\_tick} — pulsos de 60\,fps
+    \item \texttt{note0}, \texttt{note1}, \texttt{note2} — ages das notas
+    \item \texttt{hit\_pulse}, \texttt{bad\_press}, \texttt{escape\_pulse} — eventos de jogo
+    \item \texttt{btn\_press} — pressão do botão
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════
+\section{Resumo das Mudanças em Relação ao Semestre 1}
+% ═══════════════════════════════════════════════════════════
+
+\subsection{Problemas identificados no Semestre 1}
+
+\begin{enumerate}
+    \item \textbf{\texttt{fim\_tempo} e \texttt{perdeu} eram placeholders:}
+    \begin{lstlisting}[style=verilog]
+assign fim_tempo = botoes_raw[0] & botoes_raw[1]; // incorreto
+assign perdeu    = botoes_raw[2] & botoes_raw[3]; // incorreto
+    \end{lstlisting}
+    Esses sinais não tinham lógica real — eram ativados acidentalmente ao pressionar dois botões simultâneos.
+
+    \item \textbf{Contagem de tempo no \texttt{contador\_m}:}
+    O parâmetro \texttt{M=3000} para 3 segundos implicava clock de 1\,kHz, provavelmente incorreto para a placa real.
+
+    \item \textbf{Toda a lógica de jogo no Python:} notas, acertos, score, timer de 60\,s e condição de derrota estavam implementados em Python, contradizendo o objetivo do trabalho.
+\end{enumerate}
+
+\subsection{Soluções implementadas}
+
+\begin{enumerate}
+    \item \texttt{fim\_tempo} agora vem do \texttt{contador\_m} com $M=3600$ frames ($=60\,\text{s}$) no \texttt{fluxo\_dados}.
+    \item \texttt{perdeu} agora é \texttt{miss\_reg >= 10}, calculado em hardware.
+    \item \texttt{frame\_tick} gerado com $M=833\,333$ ciclos (50\,MHz/60\,fps).
+    \item Quatro módulos novos implementam a lógica do jogo completamente em Verilog.
+    \item Python reduzido a um renderer de $\approx 270$ linhas (era 470 linhas com toda a lógica).
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════
+\section*{Referências}
+% ═══════════════════════════════════════════════════════════
+\addcontentsline{toc}{section}{Referências}
+
+\begin{enumerate}
+    \item Intel/Altera. \textit{Cyclone V Device Handbook}. Disponível em: \url{https://www.intel.com/content/www/us/en/programmable/documentation/sam1403481054977.html}
+    \item Terasic. \textit{DE1-SoC User Manual}. Disponível em: \url{https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&No=836&PartNo=4}
+    \item Pygame. \textit{Pygame Documentation}. Disponível em: \url{https://www.pygame.org/docs/}
+    \item pySerial. \textit{pySerial Documentation}. Disponível em: \url{https://pyserial.readthedocs.io/}
+    \item Icarus Verilog. \textit{Icarus Verilog}. Disponível em: \url{http://iverilog.icarus.com/}
+\end{enumerate}
+
+\end{document}
