@@ -1,0 +1,270 @@
+/*-----------------------------------------------------------------------
+ * Arquivo   : fluxo_dados.v
+ * Projeto   : Beat by Bit - Semestre 2
+ *-----------------------------------------------------------------------
+ * Descricao : Fluxo de dados completo do jogo. Toda a logica do jogo
+ *             esta aqui. O Python so renderiza o que este modulo produz.
+ *
+ * Logica implementada:
+ *   - Gerador de frame_tick (~60fps com clock de 50MHz)
+ *   - Timer de countdown (3 segundos = 180 frames)
+ *   - Timer de jogo (60 segundos = 3600 frames)
+ *   - LFSR para spawn pseudoaleatorio de notas
+ *   - 4x note_track (um por trilha)
+ *   - Contadores de score, misses e combo
+ *   - Deteccao de borda para os botoes
+ *-----------------------------------------------------------------------
+ * Clock assumido: 50 MHz
+ *   frame_tick: M = 833_333 ciclos (= 50MHz / 60fps)
+ *   countdown:  180 frames = 3 segundos
+ *   game_timer: 3600 frames = 60 segundos
+ *-----------------------------------------------------------------------
+ */
+
+module fluxo_dados (
+    input  wire       clock,
+    input  wire       reset,
+
+    // Sinais de controle vindos da UC
+    input  wire       limpaR,
+    input  wire       registraR,
+    input  wire       zera_timer,
+    input  wire       conta_timer,     // ativo em COUNTDOWN e PLAY (legado)
+    input  wire       game_active,     // ativo so em PLAY
+    input  wire [3:0] db_estado,
+
+    // Entradas fisicas
+    input  wire [4:0] botoes_raw,      // [4]=Start/Pause, [3:0]=botoes do jogo
+
+    // Saidas para UC
+    output wire       jogada_feita,
+    output wire       start_pulso,
+    output wire       fim_contagem,    // fim do countdown (3s)
+    output wire       fim_tempo,       // fim do jogo (60s)
+    output wire       perdeu,          // misses >= 10
+
+    // Saida de debug (display HEX)
+    output wire [3:0] s_jogada,
+
+    // Saida de countdown para exibicao
+    output wire [7:0] countdown_sec,   // 3,2,1,0
+
+    // Ages das notas por trilha/slot para o packet_sender
+    output wire [7:0] t0n0, t0n1, t0n2,
+    output wire [7:0] t1n0, t1n1, t1n2,
+    output wire [7:0] t2n0, t2n1, t2n2,
+    output wire [7:0] t3n0, t3n1, t3n2,
+
+    // Placar
+    output wire [15:0] score,
+    output wire [7:0]  misses,
+    output wire [7:0]  combo,
+
+    // Frame tick exposto para o packet_sender no top-level
+    output wire        frame_tick_out
+);
+
+    // ----------------------------------------------------------------
+    // Separacao dos botoes
+    // ----------------------------------------------------------------
+    wire [3:0] botoes_trilha = botoes_raw[3:0];
+    wire       start_raw     = botoes_raw[4];
+
+    // ----------------------------------------------------------------
+    // Detectores de borda: botoes individuais + start
+    // ----------------------------------------------------------------
+    wire [3:0] btn_pulse;
+
+    edge_detector u_edge_btn0 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
+    edge_detector u_edge_btn1 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[1]), .pulso(btn_pulse[1]));
+    edge_detector u_edge_btn2 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[2]), .pulso(btn_pulse[2]));
+    edge_detector u_edge_btn3 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[3]), .pulso(btn_pulse[3]));
+    edge_detector u_edge_start (.clock(clock), .reset(reset), .sinal(start_raw), .pulso(start_pulso));
+
+    assign jogada_feita = |btn_pulse;
+
+    // ----------------------------------------------------------------
+    // Frame tick: 1 pulso por frame (~60fps)
+    // M = 833_333 para clock de 50MHz
+    // ----------------------------------------------------------------
+    wire frame_tick;
+
+    contador_m #(.M(833_333), .N(20)) u_frame_counter (
+        .clock  (clock),
+        .zera_as(reset),
+        .zera_s (1'b0),
+        .conta  (1'b1),
+        .Q      (),
+        .fim    (frame_tick),
+        .meio   ()
+    );
+
+    // ----------------------------------------------------------------
+    // Timer de countdown: 180 frames = 3 segundos
+    // Conta apenas quando UC esta em estado COUNTDOWN (db_estado == 1)
+    // ----------------------------------------------------------------
+    wire [7:0] cd_frame_q;
+    wire       s_fim_contagem;
+
+    contador_m #(.M(180), .N(8)) u_countdown (
+        .clock  (clock),
+        .zera_as(reset),
+        .zera_s (zera_timer),
+        .conta  (frame_tick && (db_estado == 4'b0001)),
+        .Q      (cd_frame_q),
+        .fim    (s_fim_contagem),
+        .meio   ()
+    );
+
+    assign fim_contagem = s_fim_contagem;
+
+    // Countdown em segundos (3,2,1,0) para exibicao no Python
+    reg [7:0] cd_sec_reg;
+    always @* begin
+        if      (cd_frame_q < 8'd60)  cd_sec_reg = 8'd3;
+        else if (cd_frame_q < 8'd120) cd_sec_reg = 8'd2;
+        else if (cd_frame_q < 8'd180) cd_sec_reg = 8'd1;
+        else                          cd_sec_reg = 8'd0;
+    end
+    assign countdown_sec = cd_sec_reg;
+
+    // ----------------------------------------------------------------
+    // Timer de jogo: 3600 frames = 60 segundos
+    // Conta apenas durante PLAY (game_active)
+    // ----------------------------------------------------------------
+    contador_m #(.M(3600), .N(12)) u_game_timer (
+        .clock  (clock),
+        .zera_as(reset),
+        .zera_s (zera_timer),
+        .conta  (frame_tick && game_active),
+        .Q      (),
+        .fim    (fim_tempo),
+        .meio   ()
+    );
+
+    // ----------------------------------------------------------------
+    // LFSR: avanca a cada frame_tick para spawn pseudoaleatorio
+    // ----------------------------------------------------------------
+    wire [7:0] lfsr_val;
+
+    lfsr8 u_lfsr (
+        .clock    (clock),
+        .reset    (reset),
+        .enable   (frame_tick),
+        .lfsr_out (lfsr_val)
+    );
+
+    // Spawn por trilha usando 2 bits do LFSR cada
+    // Spawn se os 2 bits forem 00 => probabilidade ~25%
+    wire [3:0] spawn_en;
+    assign spawn_en[0] = (lfsr_val[1:0] == 2'b00);
+    assign spawn_en[1] = (lfsr_val[3:2] == 2'b00);
+    assign spawn_en[2] = (lfsr_val[5:4] == 2'b00);
+    assign spawn_en[3] = (lfsr_val[7:6] == 2'b00);
+
+    // ----------------------------------------------------------------
+    // Note tracks (uma por trilha)
+    // ----------------------------------------------------------------
+    wire [3:0] hit_pulse;
+    wire [3:0] escape_pulse;
+    wire [3:0] bad_press;
+
+    note_track u_track0 (
+        .clock(clock), .reset(reset | limpaR),
+        .frame_tick(frame_tick), .game_active(game_active),
+        .spawn_en(spawn_en[0]), .btn_press(btn_pulse[0]),
+        .note0(t0n0), .note1(t0n1), .note2(t0n2),
+        .hit_pulse(hit_pulse[0]), .escape_pulse(escape_pulse[0]), .bad_press(bad_press[0])
+    );
+
+    note_track u_track1 (
+        .clock(clock), .reset(reset | limpaR),
+        .frame_tick(frame_tick), .game_active(game_active),
+        .spawn_en(spawn_en[1]), .btn_press(btn_pulse[1]),
+        .note0(t1n0), .note1(t1n1), .note2(t1n2),
+        .hit_pulse(hit_pulse[1]), .escape_pulse(escape_pulse[1]), .bad_press(bad_press[1])
+    );
+
+    note_track u_track2 (
+        .clock(clock), .reset(reset | limpaR),
+        .frame_tick(frame_tick), .game_active(game_active),
+        .spawn_en(spawn_en[2]), .btn_press(btn_pulse[2]),
+        .note0(t2n0), .note1(t2n1), .note2(t2n2),
+        .hit_pulse(hit_pulse[2]), .escape_pulse(escape_pulse[2]), .bad_press(bad_press[2])
+    );
+
+    note_track u_track3 (
+        .clock(clock), .reset(reset | limpaR),
+        .frame_tick(frame_tick), .game_active(game_active),
+        .spawn_en(spawn_en[3]), .btn_press(btn_pulse[3]),
+        .note0(t3n0), .note1(t3n1), .note2(t3n2),
+        .hit_pulse(hit_pulse[3]), .escape_pulse(escape_pulse[3]), .bad_press(bad_press[3])
+    );
+
+    wire any_hit    = |hit_pulse;
+    wire any_escape = |escape_pulse;
+    wire any_bad    = |bad_press;
+
+    // ----------------------------------------------------------------
+    // Score (16 bits): +100 acerto, -50 bad_press (minimo 0)
+    // ----------------------------------------------------------------
+    reg [15:0] score_reg;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset || limpaR) begin
+            score_reg <= 16'd0;
+        end else if (any_hit) begin
+            score_reg <= score_reg + 16'd100;
+        end else if (any_bad) begin
+            score_reg <= (score_reg >= 16'd50) ? (score_reg - 16'd50) : 16'd0;
+        end
+    end
+
+    assign score = score_reg;
+
+    // ----------------------------------------------------------------
+    // Misses (8 bits): incrementa quando nota escapa
+    // ----------------------------------------------------------------
+    reg [7:0] miss_reg;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset || limpaR) begin
+            miss_reg <= 8'd0;
+        end else if (any_escape && game_active) begin
+            miss_reg <= miss_reg + 8'd1;
+        end
+    end
+
+    assign misses = miss_reg;
+    assign perdeu = (miss_reg >= 8'd10);
+
+    // ----------------------------------------------------------------
+    // Combo (8 bits): incrementa em acertos, zera em erros
+    // ----------------------------------------------------------------
+    reg [7:0] combo_reg;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset || limpaR) begin
+            combo_reg <= 8'd0;
+        end else if (any_hit) begin
+            combo_reg <= (combo_reg < 8'd255) ? combo_reg + 8'd1 : 8'd255;
+        end else if (any_bad || any_escape) begin
+            combo_reg <= 8'd0;
+        end
+    end
+
+    assign combo          = combo_reg;
+    assign frame_tick_out = frame_tick;
+
+    // ----------------------------------------------------------------
+    // Registrador de jogada para debug (HEX1 no display)
+    // ----------------------------------------------------------------
+    registrador_4 RegBotoes (
+        .clock (clock),
+        .clear (limpaR),
+        .enable(registraR),
+        .D     (botoes_trilha),
+        .Q     (s_jogada)
+    );
+
+endmodule

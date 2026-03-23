@@ -1,0 +1,716 @@
+<?xml version="1.0" encoding="utf-8"?>
+<circuit>
+  <version>2</version>
+  <attributes/>
+  <visualElements>
+    <visualElement>
+      <elementName>Clock</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>clock</string>
+        </entry>
+        <entry>
+          <string>Frequency</string>
+          <int>1000</int>
+        </entry>
+        <entry>
+          <string>runRealTime</string>
+          <boolean>true</boolean>
+        </entry>
+      </elementAttributes>
+      <pos x="-480" y="340"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Button</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>reset</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-480" y="480"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Seven-Seg-Hex</elementName>
+      <elementAttributes/>
+      <pos x="500" y="-20"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Out</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>db\_estado</string>
+        </entry>
+        <entry>
+          <string>Bits</string>
+          <int>4</int>
+        </entry>
+      </elementAttributes>
+      <pos x="640" y="60"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Seven-Seg-Hex</elementName>
+      <elementAttributes/>
+      <pos x="560" y="420"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Out</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>db\_jogada</string>
+        </entry>
+        <entry>
+          <string>Bits</string>
+          <int>4</int>
+        </entry>
+      </elementAttributes>
+      <pos x="720" y="500"/>
+    </visualElement>
+    <visualElement>
+      <elementName>External</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>unidade_controle</string>
+        </entry>
+        <entry>
+          <string>applicationType</string>
+          <appType>IVERILOG</appType>
+        </entry>
+        <entry>
+          <string>externalInputs</string>
+          <string>clock,start,fim_contagem,fim_tempo,perdeu,jogada,reset</string>
+        </entry>
+        <entry>
+          <string>externalOutputs</string>
+          <string>limpaR,registraR,zera_timer,conta_timer,db_estado:4</string>
+        </entry>
+        <entry>
+          <string>Width</string>
+          <int>13</int>
+        </entry>
+        <entry>
+          <string>Code</string>
+          <string>module unidade_controle (
+    input clock,
+    input reset,
+    input start,               // start_pulso do FD
+    input jogada,              // Vem do jogada_feita do FD
+    input fim_contagem,        // Sinal do FD indicando fim do 3-2-1      
+    input fim_tempo,           // Sinal do FD indicando fim da música/sessão      
+    input perdeu,              // Sinal do FD indicando limite de erros atingido         
+    output reg registraR,      // Sinal para o FD salvar a jogada
+    output reg limpaR,         // Sinal para o FD limpar o registrador
+    output reg zera_timer,
+    output reg conta_timer,
+    output reg [3:0] db_estado // Depuração nos displays
+);
+
+    parameter idle      = 4&apos;b0000; // 0: Aguardando START
+    parameter countdown = 4&apos;b0001; // 1: Preparação 3, 2, 1
+    parameter play      = 4&apos;b0010; // 2: Execução do jogo
+    parameter pause     = 4&apos;b0011; // 3: Jogo pausado
+    parameter end_win   = 4&apos;b0100; // 4: Vitoria
+    parameter end_lose  = 4&apos;b0101; // 5: Derrota
+
+    reg [3:0] Eatual, Eprox;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset) Eatual &lt;= idle;
+        else Eatual &lt;= Eprox;
+    end
+
+    always @* begin
+        case (Eatual)
+            idle:      Eprox = start ? countdown : idle;
+            countdown: Eprox = fim_contagem ? play : countdown;
+            play:      Eprox = perdeu ? end_lose : 
+                               (fim_tempo ? end_win : 
+                               (start ? pause : play));
+            pause:     Eprox = start ? play : pause;
+            end_win:   Eprox = start ? idle : end_win;
+            end_lose:  Eprox = start ? idle : end_lose;
+            default:   Eprox = idle;
+        endcase
+    end
+
+    always @* begin
+        zera_timer  = (Eatual == idle || Eatual == end_win || Eatual == end_lose) ? 1&apos;b1 : 1&apos;b0;
+        conta_timer = (Eatual == countdown || Eatual == play) ? 1&apos;b1 : 1&apos;b0;
+        limpaR      = (Eatual == idle) ? 1&apos;b1 : 1&apos;b0;
+        registraR   = (Eatual == play &amp;&amp; jogada) ? 1&apos;b1 : 1&apos;b0;
+        db_estado   = Eatual;
+    end
+
+endmodule</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-280" y="360"/>
+    </visualElement>
+    <visualElement>
+      <elementName>External</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>fluxo_dados</string>
+        </entry>
+        <entry>
+          <string>applicationType</string>
+          <appType>IVERILOG</appType>
+        </entry>
+        <entry>
+          <string>externalInputs</string>
+          <string>clock,botoes_raw:5,limpaR,registraR,zera_timer,conta_timer,db_estado:4,reset</string>
+        </entry>
+        <entry>
+          <string>Code</string>
+          <string>module fluxo_dados (
+    input clock,
+    input reset,
+    
+    // Sinais de controle vindos da UC para gerenciar a jogada
+    input limpaR,              
+    input registraR,           
+    input zera_timer,        
+    input conta_timer,         
+    input [3:0] db_estado, 
+    
+    // Entradas fisicas
+    input [4:0] botoes_raw,    // [4] = Start/Pause, [3:0] = Botoes do jogo
+    
+    // Saidas de dados e controle
+    output [3:0] s_jogada,     // Jogada
+    output jogada_feita,       // Indica aperto de nota
+    output start_pulso,        // Indica aperto do start
+    
+    output fim_contagem,
+    output fim_tempo,
+    output perdeu
+);
+
+    // Separando os botões para facilitar a logica
+    wire [3:0] botoes_trilha = botoes_raw[3:0]; // Botoes do jogo
+    wire start = botoes_raw[4];                 // Botao de controle
+
+    // Verifica se ha jogada
+    wire s_tem_jogada = |botoes_trilha; 
+
+    // Gera o pulso de &apos;jogada_feita&apos; para avisar a UC
+    edge_detector u_edge_jogada (
+        .clock(clock),
+        .reset(reset | limpaR),
+        .sinal(s_tem_jogada),
+        .pulso(jogada_feita)
+    );
+
+    // Temporizador de 3 segundos para o countdown
+    contador_m #(.M(3000), .N(12)) timer_countdown (
+        .clock   (clock),
+        .zera_as (reset),
+        .zera_s  (zera_timer),
+        // Conta apenas quando a UC autoriza e estamos no estado COUNTDOWN (0001)
+        .conta   (conta_timer &amp;&amp; (db_estado == 4&apos;b0001)),
+        .Q       (),             
+        .fim     (fim_contagem), // Gera o sinal que faz a UC pular para PLAY
+        .meio    ()
+    );
+
+    // Registrador que &quot;salva&quot; a jogada quando a UC manda (registraR)
+    registrador_4 RegBotoes (
+        .clock(clock),
+        .clear(limpaR),
+        .enable(registraR),
+        .D(botoes_trilha),
+        .Q(s_jogada)
+    );
+
+    // Detector de borda para o Start/Pause
+    edge_detector u_edge_start (
+        .clock(clock),
+        .reset(reset),
+        .sinal(start),
+        .pulso(start_pulso)
+    );
+
+    // Sinais temporarios
+	assign fim_tempo = botoes_raw[0] &amp; botoes_raw[1]; 
+	assign perdeu    = botoes_raw[2] &amp; botoes_raw[3];
+
+endmodule
+
+module edge_detector (
+    input  clock,
+    input  reset,
+    input  sinal,
+    output pulso
+);
+
+    reg reg0;
+    reg reg1;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset) begin
+            reg0 &lt;= 1&apos;b0;
+            reg1 &lt;= 1&apos;b0;
+        end else if (clock) begin
+            reg0 &lt;= sinal;
+            reg1 &lt;= reg0;
+        end
+    end
+
+    assign pulso = ~reg1 &amp; reg0;
+
+endmodule
+
+module registrador_4 (
+    input        clock,
+    input        clear,
+    input        enable,
+    input  [3:0] D,
+    output [3:0] Q
+);
+
+    reg [3:0] IQ;
+
+    always @(posedge clock or posedge clear) begin
+        if (clear)
+            IQ &lt;= 0;
+        else if (enable)
+            IQ &lt;= D;
+    end
+
+    assign Q = IQ;
+
+endmodule
+
+module contador_m #(parameter M=100, N=7)
+  (
+   input  wire          clock,
+   input  wire          zera_as,
+   input  wire          zera_s,
+   input  wire          conta,
+   output reg  [N-1:0]  Q,
+   output reg           fim,
+   output reg           meio
+  );
+
+  always @(posedge clock or posedge zera_as) begin
+    if (zera_as) begin
+      Q &lt;= 0;
+    end else if (clock) begin
+      if (zera_s) begin
+        Q &lt;= 0;
+      end else if (conta) begin
+        if (Q == M-1) begin
+          Q &lt;= 0;
+        end else begin
+          Q &lt;= Q + 1&apos;b1;
+        end
+      end
+    end
+  end
+
+  // Saidas
+  always @ (Q)
+      if (Q == M-1)   fim = 1;
+      else            fim = 0;
+
+  always @ (Q)
+      if (Q == M/2-1) meio = 1;
+      else            meio = 0;
+
+endmodule</string>
+        </entry>
+        <entry>
+          <string>Width</string>
+          <int>13</int>
+        </entry>
+        <entry>
+          <string>externalOutputs</string>
+          <string>start_pulso,fim_contagem,fim_tempo,perdeu,jogada_feita,s_jogada:4</string>
+        </entry>
+      </elementAttributes>
+      <pos x="140" y="320"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Ground</elementName>
+      <elementAttributes/>
+      <pos x="560" y="180"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Ground</elementName>
+      <elementAttributes/>
+      <pos x="620" y="600"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Splitter</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Input Splitting</string>
+          <string>1,1,1,1,1</string>
+        </entry>
+        <entry>
+          <string>Output Splitting</string>
+          <string>5</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-40" y="-20"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Button</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>botao[0]</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-180" y="-20"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Button</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>botao[1]</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-180" y="20"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Button</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>botao[2]</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-180" y="60"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Button</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>botao[3]</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-180" y="100"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Button</elementName>
+      <elementAttributes>
+        <entry>
+          <string>Label</string>
+          <string>botao[4]/start</string>
+        </entry>
+      </elementAttributes>
+      <pos x="-180" y="140"/>
+    </visualElement>
+  </visualElements>
+  <wires>
+    <wire>
+      <p1 x="120" y="320"/>
+      <p2 x="140" y="320"/>
+    </wire>
+    <wire>
+      <p1 x="400" y="320"/>
+      <p2 x="420" y="320"/>
+    </wire>
+    <wire>
+      <p1 x="-160" y="0"/>
+      <p2 x="-40" y="0"/>
+    </wire>
+    <wire>
+      <p1 x="-320" y="260"/>
+      <p2 x="420" y="260"/>
+    </wire>
+    <wire>
+      <p1 x="500" y="580"/>
+      <p2 x="600" y="580"/>
+    </wire>
+    <wire>
+      <p1 x="600" y="580"/>
+      <p2 x="680" y="580"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="520"/>
+      <p2 x="20" y="520"/>
+    </wire>
+    <wire>
+      <p1 x="-380" y="200"/>
+      <p2 x="480" y="200"/>
+    </wire>
+    <wire>
+      <p1 x="20" y="460"/>
+      <p2 x="140" y="460"/>
+    </wire>
+    <wire>
+      <p1 x="-400" y="460"/>
+      <p2 x="-280" y="460"/>
+    </wire>
+    <wire>
+      <p1 x="-180" y="140"/>
+      <p2 x="-60" y="140"/>
+    </wire>
+    <wire>
+      <p1 x="-20" y="400"/>
+      <p2 x="140" y="400"/>
+    </wire>
+    <wire>
+      <p1 x="400" y="400"/>
+      <p2 x="500" y="400"/>
+    </wire>
+    <wire>
+      <p1 x="-340" y="400"/>
+      <p2 x="-280" y="400"/>
+    </wire>
+    <wire>
+      <p1 x="-20" y="-20"/>
+      <p2 x="60" y="-20"/>
+    </wire>
+    <wire>
+      <p1 x="-180" y="-20"/>
+      <p2 x="-40" y="-20"/>
+    </wire>
+    <wire>
+      <p1 x="-480" y="340"/>
+      <p2 x="-300" y="340"/>
+    </wire>
+    <wire>
+      <p1 x="400" y="340"/>
+      <p2 x="440" y="340"/>
+    </wire>
+    <wire>
+      <p1 x="60" y="340"/>
+      <p2 x="140" y="340"/>
+    </wire>
+    <wire>
+      <p1 x="-140" y="20"/>
+      <p2 x="-40" y="20"/>
+    </wire>
+    <wire>
+      <p1 x="-180" y="20"/>
+      <p2 x="-160" y="20"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="280"/>
+      <p2 x="120" y="280"/>
+    </wire>
+    <wire>
+      <p1 x="-360" y="220"/>
+      <p2 x="460" y="220"/>
+    </wire>
+    <wire>
+      <p1 x="-480" y="480"/>
+      <p2 x="-300" y="480"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="480"/>
+      <p2 x="-280" y="480"/>
+    </wire>
+    <wire>
+      <p1 x="100" y="160"/>
+      <p2 x="540" y="160"/>
+    </wire>
+    <wire>
+      <p1 x="540" y="160"/>
+      <p2 x="600" y="160"/>
+    </wire>
+    <wire>
+      <p1 x="400" y="420"/>
+      <p2 x="500" y="420"/>
+    </wire>
+    <wire>
+      <p1 x="-20" y="420"/>
+      <p2 x="140" y="420"/>
+    </wire>
+    <wire>
+      <p1 x="-360" y="420"/>
+      <p2 x="-280" y="420"/>
+    </wire>
+    <wire>
+      <p1 x="-180" y="100"/>
+      <p2 x="-120" y="100"/>
+    </wire>
+    <wire>
+      <p1 x="-20" y="360"/>
+      <p2 x="140" y="360"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="360"/>
+      <p2 x="-280" y="360"/>
+    </wire>
+    <wire>
+      <p1 x="400" y="360"/>
+      <p2 x="460" y="360"/>
+    </wire>
+    <wire>
+      <p1 x="-120" y="40"/>
+      <p2 x="-40" y="40"/>
+    </wire>
+    <wire>
+      <p1 x="-340" y="240"/>
+      <p2 x="440" y="240"/>
+    </wire>
+    <wire>
+      <p1 x="680" y="500"/>
+      <p2 x="720" y="500"/>
+    </wire>
+    <wire>
+      <p1 x="-400" y="180"/>
+      <p2 x="500" y="180"/>
+    </wire>
+    <wire>
+      <p1 x="-20" y="440"/>
+      <p2 x="100" y="440"/>
+    </wire>
+    <wire>
+      <p1 x="-380" y="440"/>
+      <p2 x="-280" y="440"/>
+    </wire>
+    <wire>
+      <p1 x="100" y="440"/>
+      <p2 x="140" y="440"/>
+    </wire>
+    <wire>
+      <p1 x="600" y="60"/>
+      <p2 x="640" y="60"/>
+    </wire>
+    <wire>
+      <p1 x="-60" y="60"/>
+      <p2 x="-40" y="60"/>
+    </wire>
+    <wire>
+      <p1 x="-180" y="60"/>
+      <p2 x="-140" y="60"/>
+    </wire>
+    <wire>
+      <p1 x="-320" y="380"/>
+      <p2 x="-280" y="380"/>
+    </wire>
+    <wire>
+      <p1 x="400" y="380"/>
+      <p2 x="480" y="380"/>
+    </wire>
+    <wire>
+      <p1 x="-20" y="380"/>
+      <p2 x="140" y="380"/>
+    </wire>
+    <wire>
+      <p1 x="480" y="200"/>
+      <p2 x="480" y="380"/>
+    </wire>
+    <wire>
+      <p1 x="420" y="260"/>
+      <p2 x="420" y="320"/>
+    </wire>
+    <wire>
+      <p1 x="100" y="160"/>
+      <p2 x="100" y="440"/>
+    </wire>
+    <wire>
+      <p1 x="-360" y="220"/>
+      <p2 x="-360" y="420"/>
+    </wire>
+    <wire>
+      <p1 x="680" y="500"/>
+      <p2 x="680" y="580"/>
+    </wire>
+    <wire>
+      <p1 x="-140" y="20"/>
+      <p2 x="-140" y="60"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="480"/>
+      <p2 x="-300" y="520"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="280"/>
+      <p2 x="-300" y="340"/>
+    </wire>
+    <wire>
+      <p1 x="-300" y="340"/>
+      <p2 x="-300" y="360"/>
+    </wire>
+    <wire>
+      <p1 x="460" y="220"/>
+      <p2 x="460" y="360"/>
+    </wire>
+    <wire>
+      <p1 x="620" y="560"/>
+      <p2 x="620" y="600"/>
+    </wire>
+    <wire>
+      <p1 x="-400" y="180"/>
+      <p2 x="-400" y="460"/>
+    </wire>
+    <wire>
+      <p1 x="560" y="120"/>
+      <p2 x="560" y="180"/>
+    </wire>
+    <wire>
+      <p1 x="-340" y="240"/>
+      <p2 x="-340" y="400"/>
+    </wire>
+    <wire>
+      <p1 x="20" y="460"/>
+      <p2 x="20" y="520"/>
+    </wire>
+    <wire>
+      <p1 x="500" y="420"/>
+      <p2 x="500" y="580"/>
+    </wire>
+    <wire>
+      <p1 x="500" y="180"/>
+      <p2 x="500" y="400"/>
+    </wire>
+    <wire>
+      <p1 x="-120" y="40"/>
+      <p2 x="-120" y="100"/>
+    </wire>
+    <wire>
+      <p1 x="600" y="560"/>
+      <p2 x="600" y="580"/>
+    </wire>
+    <wire>
+      <p1 x="600" y="60"/>
+      <p2 x="600" y="160"/>
+    </wire>
+    <wire>
+      <p1 x="120" y="280"/>
+      <p2 x="120" y="320"/>
+    </wire>
+    <wire>
+      <p1 x="440" y="240"/>
+      <p2 x="440" y="340"/>
+    </wire>
+    <wire>
+      <p1 x="-380" y="200"/>
+      <p2 x="-380" y="440"/>
+    </wire>
+    <wire>
+      <p1 x="-60" y="60"/>
+      <p2 x="-60" y="140"/>
+    </wire>
+    <wire>
+      <p1 x="540" y="120"/>
+      <p2 x="540" y="160"/>
+    </wire>
+    <wire>
+      <p1 x="60" y="-20"/>
+      <p2 x="60" y="340"/>
+    </wire>
+    <wire>
+      <p1 x="-160" y="0"/>
+      <p2 x="-160" y="20"/>
+    </wire>
+    <wire>
+      <p1 x="-320" y="260"/>
+      <p2 x="-320" y="380"/>
+    </wire>
+  </wires>
+  <measurementOrdering/>
+</circuit>
