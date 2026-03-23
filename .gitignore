@@ -44,3 +44,17 @@ ip/
 tb*.out
 
 # Evidencias geradas por teste
+
+# Ambientes virtuais Python
+venv/
+env/
+.venv/
+ENV/
+.ENV/
+__pycache__/
+*.pyc
+.pytest_cache/
+.tox/
+*.egg-info/
+dist/
+build/
