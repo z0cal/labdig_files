@@ -1,0 +1,3 @@
+PWD /home/zocal/labdig_files/projeto_sem2
+INPUT /usr/share/texmf-dist/web2c/texmf.cnf
+INPUT /home/zocal/.texlive/texmf-var/web2c/pdftex/pdflatex.fmt

@@ -39,6 +39,9 @@ case "$TARGET" in
     tb_note_track)
         run_tb tb_note_track "note_track.v"
         ;;
+    tb_debounce_pulse)
+        run_tb tb_debounce_pulse "debounce_pulse.v"
+        ;;
     tb_packet_sender)
         run_tb tb_packet_sender "uart_tx.v"
         ;;
@@ -46,10 +49,11 @@ case "$TARGET" in
         run_tb tb_uart_tx     "uart_tx.v"
         run_tb tb_lfsr8       "lfsr8.v"
         run_tb tb_note_track  "note_track.v"
+        run_tb tb_debounce_pulse "debounce_pulse.v"
         run_tb tb_packet_sender "uart_tx.v"
         ;;
     *)
-        echo "Uso: $0 [tb_uart_tx|tb_lfsr8|tb_note_track|tb_packet_sender|all]"
+        echo "Uso: $0 [tb_uart_tx|tb_lfsr8|tb_note_track|tb_debounce_pulse|tb_packet_sender|all]"
         exit 1
         ;;
 esac

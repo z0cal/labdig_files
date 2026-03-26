@@ -518,6 +518,8 @@ Timer de jogo (\texttt{u\_game\_timer}) & 3\,600   & 12 & 60 segundos \\
 \caption{Temporizadores baseados em \texttt{contador\_m} instanciados no \texttt{fluxo\_dados}. Clock de 50\,MHz assumido.}
 \end{table}
 
+\textbf{Debounce dos botões:} Cada entrada física em \texttt{botoes\_raw[4:0]} agora passa por um módulo \texttt{debounce\_pulse}. O primeiro toque gera um pulso de 1 ciclo logo na primeira borda de subida sincronizada, e novas transições ficam bloqueadas por 180\,ms. Para clock de 50\,MHz, isso corresponde a 9\,000\,000 ciclos. A política foi aplicada tanto às 4 trilhas quanto ao botão \texttt{START/PAUSE}; como consequência, toques sucessivos na mesma trilha com menos de 180\,ms entre si são descartados.
+
 \textbf{Contadores de placar:}
 
 \begin{lstlisting}[style=verilog, caption={Lógica dos contadores de pontuação no \texttt{fluxo\_dados.v}.}]

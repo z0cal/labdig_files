@@ -12,13 +12,12 @@
  *   - LFSR para spawn pseudoaleatorio de notas
  *   - 4x note_track (um por trilha)
  *   - Contadores de score, misses e combo
- *   - Debounce + deteccao de borda para os botoes
+ *   - Deteccao de borda para os botoes
  *-----------------------------------------------------------------------
  * Clock assumido: 50 MHz
  *   frame_tick: M = 833_333 ciclos (= 50MHz / 60fps)
  *   countdown:  180 frames = 3 segundos
  *   game_timer: 3600 frames = 60 segundos
- *   debounce:   9_000_000 ciclos (= 180ms)
  *-----------------------------------------------------------------------
  */
 
@@ -72,23 +71,15 @@ module fluxo_dados (
     wire       start_raw     = botoes_raw[4];
 
     // ----------------------------------------------------------------
-    // Debounce + pulso imediato: 180ms @ 50MHz = 9_000_000 ciclos.
-    // Esta escolha tambem filtra hits validos na mesma trilha abaixo
-    // desse intervalo, por decisao explicita de projeto.
+    // Detectores de borda: botoes individuais + start
     // ----------------------------------------------------------------
-    localparam integer BTN_DEBOUNCE_CYCLES = 9_000_000;
     wire [3:0] btn_pulse;
 
-    debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn0 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
-    debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn1 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[1]), .pulso(btn_pulse[1]));
-    debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn2 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[2]), .pulso(btn_pulse[2]));
-    debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn3 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[3]), .pulso(btn_pulse[3]));
-    debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_start (.clock(clock), .reset(reset), .sinal(start_raw), .pulso(start_pulso));
+    edge_detector u_edge_btn0 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
+    edge_detector u_edge_btn1 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[1]), .pulso(btn_pulse[1]));
+    edge_detector u_edge_btn2 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[2]), .pulso(btn_pulse[2]));
+    edge_detector u_edge_btn3 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[3]), .pulso(btn_pulse[3]));
+    edge_detector u_edge_start (.clock(clock), .reset(reset), .sinal(start_raw), .pulso(start_pulso));
 
     assign jogada_feita = |btn_pulse;
 
