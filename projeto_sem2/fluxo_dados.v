@@ -163,17 +163,25 @@ module fluxo_dados (
         .lfsr_out (lfsr_val)
     );
 
-    // Spawn por trilha usando 2 bits do LFSR cada
-    // Spawn se os 2 bits forem 00 => probabilidade ~25%
-    wire [3:0] spawn_en;
-    assign spawn_en[0] = (lfsr_val[1:0] == 2'b00);
-    assign spawn_en[1] = (lfsr_val[3:2] == 2'b00);
-    assign spawn_en[2] = (lfsr_val[5:4] == 2'b00);
-    assign spawn_en[3] = (lfsr_val[7:6] == 2'b00);
+    // Spawn tick: uma nota por vez, nunca 2 notas pressiveis em trilhas diferentes.
+    // SPAWN_INTERVAL_FRAMES > MISS_AGE (152) => ciclo efetivo = SPAWN_INTERVAL_FRAMES.
+    // 360 frames = 6 s entre notas @ 60fps.
+    localparam integer SPAWN_INTERVAL_FRAMES = 360;  // 6s @ 60fps
+    localparam [3:0]  MAX_ACTIVE_NOTES      = 4'd1;
+    reg [8:0] spawn_cnt;  // 9 bits: alcanca ate 511, suficiente para 359
+    always @(posedge clock or posedge reset) begin
+        if (reset) begin
+            spawn_cnt <= 9'd0;
+        end else if (frame_tick && game_active) begin
+            spawn_cnt <= (spawn_cnt == SPAWN_INTERVAL_FRAMES - 1) ? 9'd0 : spawn_cnt + 9'd1;
+        end
+    end
+    wire spawn_tick = frame_tick && game_active && (spawn_cnt == SPAWN_INTERVAL_FRAMES - 1);
 
     // ----------------------------------------------------------------
     // Note tracks (uma por trilha)
     // ----------------------------------------------------------------
+    wire [3:0] spawn_en;
     wire [3:0] hit_pulse;
     wire [3:0] escape_pulse;
     wire [3:0] bad_press;
@@ -210,12 +218,35 @@ module fluxo_dados (
         .hit_pulse(hit_pulse[3]), .escape_pulse(escape_pulse[3]), .bad_press(bad_press[3])
     );
 
+    // Apenas trilhas vazias podem receber nota nova.
+    wire [3:0] track_empty;
+    assign track_empty[0] = (t0n0 == 8'hFF) && (t0n1 == 8'hFF) && (t0n2 == 8'hFF);
+    assign track_empty[1] = (t1n0 == 8'hFF) && (t1n1 == 8'hFF) && (t1n2 == 8'hFF);
+    assign track_empty[2] = (t2n0 == 8'hFF) && (t2n1 == 8'hFF) && (t2n2 == 8'hFF);
+    assign track_empty[3] = (t3n0 == 8'hFF) && (t3n1 == 8'hFF) && (t3n2 == 8'hFF);
+
+    // Conta notas visiveis para limitar a carga cognitiva.
+    wire [3:0] active_note_count;
+    assign active_note_count =
+        (t0n0 != 8'hFF) + (t0n1 != 8'hFF) + (t0n2 != 8'hFF) +
+        (t1n0 != 8'hFF) + (t1n1 != 8'hFF) + (t1n2 != 8'hFF) +
+        (t2n0 != 8'hFF) + (t2n1 != 8'hFF) + (t2n2 != 8'hFF) +
+        (t3n0 != 8'hFF) + (t3n1 != 8'hFF) + (t3n2 != 8'hFF);
+
+    // Escolhe entre trilha 0 e 1 (unicas com botoes fisicos disponiveis).
+    wire [3:0] spawn_select = 4'b0001 << lfsr_val[0];
+    wire       allow_spawn  = (active_note_count < MAX_ACTIVE_NOTES);
+
+    assign spawn_en = (spawn_tick && allow_spawn) ? (spawn_select & track_empty) : 4'b0000;
+
     wire any_hit    = |hit_pulse;
     wire any_escape = |escape_pulse;
     wire any_bad    = |bad_press;
 
     // ----------------------------------------------------------------
-    // Score (16 bits): +100 acerto, -50 bad_press (minimo 0)
+    // Score (16 bits): +100 acerto; bad_press nao penaliza score
+    // para evitar punicao excessiva em toques errados durante o treino.
+    // O combo ja pune o erro ao voltar para zero.
     // ----------------------------------------------------------------
     reg [15:0] score_reg;
 
@@ -226,8 +257,6 @@ module fluxo_dados (
             score_reg <= 16'd0;
         end else if (any_hit) begin
             score_reg <= score_reg + 16'd100;
-        end else if (any_bad) begin
-            score_reg <= (score_reg >= 16'd50) ? (score_reg - 16'd50) : 16'd0;
         end
     end
 
