@@ -27,6 +27,8 @@ pygame.init()
 import threading
 import queue
 import argparse
+import math
+import random
 from sys import exit
 
 try:
@@ -193,9 +195,13 @@ class Renderer:
         self.fpga_misses   = 0
         self.fpga_combo    = 0
 
-        # Efeitos visuais de acerto (locais, puramente cosmeticos)
-        self.effects = []
-        self._prev_notes = [[], [], [], []]  # para detectar notas que sumiram (acerto)
+        # Efeitos visuais tipados
+        self._hit_effects  = []   # burst de acerto
+        self._miss_effects = []   # flash vermelho de erro
+        self._prev_notes   = [[], [], [], []]
+
+        # Surface scratch reutilizavel (evita alocacao por frame)
+        self.scratch = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
 
         self._serial_buf = bytearray()
         self.serial = SerialReader(port=serial_port, baudrate=baudrate)
@@ -203,6 +209,12 @@ class Renderer:
 
         self._build_glow_surfaces()
         self._build_btn_surfaces()
+        self._build_scanline_surf()
+        self._build_bg_grid_surf()
+        self._build_miss_surfs()
+        self._build_score_backdrop()
+        self._build_ghost_note_surfs()
+        self._init_idle_anim()
 
     # ── Pre-renderizacao ──────────────────────────────────────────────────────
 
@@ -232,6 +244,98 @@ class Renderer:
             pygame.draw.circle(on, (255, 255, 255), (size // 2, size // 2), r, 2)
             self.btn_on.append(on)
 
+    def _build_scanline_surf(self):
+        """Pre-renderiza overlay de scanlines CRT (linhas escuras a cada 2px)."""
+        self.scanline_surf = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        for row in range(0, SCREEN_H, 2):
+            pygame.draw.rect(self.scanline_surf, (0, 0, 0, 60), (0, row, SCREEN_W, 1))
+
+    def _build_bg_grid_surf(self):
+        """Pre-renderiza grid horizontal sutil no fundo."""
+        self.bg_grid_surf = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        for y in range(0, SCREEN_H, 40):
+            pygame.draw.line(self.bg_grid_surf, (30, 30, 65, 255),
+                             (0, y), (SCREEN_W, y), 1)
+
+    def _build_miss_surfs(self):
+        """Pre-renderiza superficies vermelhas para flash de erro por trilha."""
+        # Superficie sem SRCALPHA para set_alpha() funcionar corretamente
+        self.miss_lane_surfs = []
+        for _ in range(4):
+            s = pygame.Surface((TRACK_W, SCREEN_H))
+            s.fill((255, 30, 30))
+            self.miss_lane_surfs.append(s)
+
+    def _build_score_backdrop(self):
+        """Pre-renderiza painel escuro atras do HUD de score."""
+        self.score_backdrop = pygame.Surface((260, 76), pygame.SRCALPHA)
+        pygame.draw.rect(self.score_backdrop, (0, 0, 0, 150),
+                         (0, 0, 260, 76), border_radius=6)
+        pygame.draw.rect(self.score_backdrop, (60, 60, 120, 180),
+                         (0, 0, 260, 76), 1, border_radius=6)
+
+    def _build_ghost_note_surfs(self):
+        """Versao fantasma das notas para a animacao da tela idle."""
+        self.ghost_note_surfs = []
+        for color in TRACK_COLORS:
+            s = pygame.Surface((GLOW_SIZE, GLOW_SIZE), pygame.SRCALPHA)
+            pygame.draw.circle(s, (*color, 12),  (GLOW_CENTER, GLOW_CENTER), 58)
+            pygame.draw.circle(s, (*color, 25),  (GLOW_CENTER, GLOW_CENTER), 40)
+            pygame.draw.circle(s, (*color, 55),  (GLOW_CENTER, GLOW_CENTER), NOTE_RADIUS + 4)
+            pygame.draw.circle(s, (*color, 90),  (GLOW_CENTER, GLOW_CENTER), NOTE_RADIUS)
+            pygame.draw.circle(s, (200, 200, 255, 50), (GLOW_CENTER, GLOW_CENTER), NOTE_RADIUS, 2)
+            self.ghost_note_surfs.append(s)
+
+    def _init_idle_anim(self):
+        """Inicializa estado da animacao de fundo da tela idle."""
+        self._idle_notes = []
+        for lane in range(4):
+            for _ in range(4):
+                self._idle_notes.append({
+                    'lane': lane,
+                    'y': float(random.randint(-SCREEN_H, SCREEN_H)),
+                    'speed': random.uniform(0.8, 2.0),
+                })
+
+        self._idle_stars = []
+        for _ in range(90):
+            self._idle_stars.append({
+                'x': float(random.randint(0, SCREEN_W)),
+                'y': float(random.randint(0, SCREEN_H)),
+                'vy': random.uniform(0.15, 0.55),
+                'size': random.choice([1, 1, 1, 2, 2, 3]),
+                'base_alpha': random.randint(40, 160),
+                'phase': random.uniform(0, math.pi * 2),
+            })
+
+    def _draw_idle_anim(self):
+        """Atualiza e desenha a animacao de fundo da tela idle."""
+        ticks = pygame.time.get_ticks() * 0.001
+
+        # Estrelas flutuando para cima com twinkle
+        for star in self._idle_stars:
+            star['y'] -= star['vy']
+            if star['y'] < -4:
+                star['y'] = float(SCREEN_H + 4)
+                star['x'] = float(random.randint(0, SCREEN_W))
+            alpha = int(star['base_alpha'] * (0.5 + 0.5 * math.sin(ticks * 2.1 + star['phase'])))
+            color = (alpha, alpha, min(255, alpha + 60))
+            pygame.draw.circle(self.screen, color,
+                               (int(star['x']), int(star['y'])), star['size'])
+
+        # Notas fantasma caindo nas trilhas
+        for note in self._idle_notes:
+            note['y'] += note['speed']
+            if note['y'] > SCREEN_H + GLOW_CENTER:
+                note['y'] = float(random.randint(-200, -GLOW_CENTER))
+                note['speed'] = random.uniform(0.8, 2.0)
+            y = int(note['y'])
+            lane = note['lane']
+            self.screen.blit(
+                self.ghost_note_surfs[lane],
+                (TRACK_X[lane] - GLOW_CENTER, y - GLOW_CENTER),
+            )
+
     # ── Fontes ────────────────────────────────────────────────────────────────
 
     def font(self, size):
@@ -252,50 +356,102 @@ class Renderer:
             self._serial_buf = self._serial_buf[consumed:]
             if pkt is None:
                 break
-            # Guarda notas anteriores para detectar acertos (efeito visual)
             self._prev_notes = [list(t) for t in self.fpga_notes]
-            # Atualiza estado
             self.fpga_state     = pkt['state']
             self.fpga_countdown = pkt['countdown']
             self.fpga_notes     = pkt['notes']
             self.fpga_score     = pkt['score']
             self.fpga_misses    = pkt['misses']
             self.fpga_combo     = pkt['combo']
-            # Detecta notas que sumiram perto da hit zone => acerto
-            self._detect_hits()
+            self._detect_note_events()
 
-    def _detect_hits(self):
-        """Cria efeito visual quando uma nota desaparece perto da hit zone."""
+    def _detect_note_events(self):
+        """Detecta notas que sumiram e cria efeito de acerto ou erro."""
         for i in range(4):
             prev_set = set(self._prev_notes[i])
             curr_set = set(self.fpga_notes[i])
             for y in prev_set - curr_set:
-                if abs(y - HIT_Y) <= 60:  # nota sumiu perto da hit zone
-                    self.effects.append({
-                        'x': TRACK_X[i], 'y': HIT_Y,
-                        'color': TRACK_COLORS[i],
-                        'r': 8, 'alpha': 255, 'active': True,
-                    })
+                if abs(y - HIT_Y) <= 60:
+                    # Nota sumiu perto da hit zone → acerto
+                    self._spawn_hit_effect(i, TRACK_X[i], HIT_Y)
+                elif y > HIT_Y + 60:
+                    # Nota sumiu abaixo da hit zone → erro
+                    self._spawn_miss_effect(i)
 
-    # ── Efeitos ───────────────────────────────────────────────────────────────
+    # ── Spawn de efeitos ──────────────────────────────────────────────────────
 
-    def _update_draw_effects(self):
-        for eff in self.effects:
+    def _spawn_hit_effect(self, lane, x, y):
+        """Cria burst de acerto: 3 aneis expansivos + 7 particulas + flash."""
+        particles = []
+        for i in range(7):
+            angle = 2 * math.pi * i / 7 + random.uniform(-0.3, 0.3)
+            speed = random.uniform(2.5, 5.5)
+            size  = random.choice([3, 4, 4, 5])
+            particles.append({
+                'px': float(x), 'py': float(y),
+                'vx': math.cos(angle) * speed,
+                'vy': math.sin(angle) * speed,
+                'alpha': 255, 'size': size,
+            })
+        self._hit_effects.append({
+            'lane': lane, 'x': x, 'y': y,
+            'color': TRACK_COLORS[lane],
+            'age': 0,
+            'rings': [
+                {'r': 8,  'alpha': 255, 'delay': 0},
+                {'r': 5,  'alpha': 220, 'delay': 5},
+                {'r': 3,  'alpha': 180, 'delay': 10},
+            ],
+            'particles': particles,
+            'flash_alpha': 255,
+            'active': True,
+        })
+
+    def _spawn_miss_effect(self, lane):
+        """Cria flash vermelho de erro na trilha + vinheta nas bordas."""
+        self._miss_effects.append({
+            'lane': lane, 'x': TRACK_X[lane],
+            'age': 0, 'lane_alpha': 200, 'vignette_alpha': 140,
+            'active': True,
+        })
+
+    # ── Atualizacao de efeitos ────────────────────────────────────────────────
+
+    def _advance_effects(self):
+        """Avanca o estado de todos os efeitos. Chamado uma vez por frame."""
+        for eff in self._hit_effects:
             if not eff['active']:
                 continue
-            eff['r']     += 5
-            eff['alpha']  = max(0, eff['alpha'] - 18)
-            if eff['r'] >= 70:
+            eff['age'] += 1
+            eff['flash_alpha'] = max(0, eff['flash_alpha'] - 30)
+            for ring in eff['rings']:
+                if eff['age'] >= ring['delay']:
+                    ring['r']     += 6
+                    ring['alpha']  = max(0, ring['alpha'] - 12)
+            for p in eff['particles']:
+                p['px'] += p['vx']
+                p['py'] += p['vy']
+                p['vy'] += 0.15   # gravidade
+                p['alpha'] = max(0, p['alpha'] - 10)
+            if eff['age'] >= 45:
                 eff['active'] = False
+
+        for eff in self._miss_effects:
+            if not eff['active']:
                 continue
-            size = eff['r'] * 2
-            s = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.circle(s, (*eff['color'], eff['alpha']),
-                               (eff['r'], eff['r']), eff['r'], 3)
-            self.screen.blit(s, (eff['x'] - eff['r'], eff['y'] - eff['r']))
-        self.effects = [e for e in self.effects if e['active']]
+            eff['age'] += 1
+            eff['lane_alpha']     = max(0, eff['lane_alpha'] - 10)
+            eff['vignette_alpha'] = max(0, eff['vignette_alpha'] - 7)
+            if eff['age'] >= 25:
+                eff['active'] = False
+
+        self._hit_effects  = [e for e in self._hit_effects  if e['active']]
+        self._miss_effects = [e for e in self._miss_effects if e['active']]
 
     # ── Componentes de desenho ────────────────────────────────────────────────
+
+    def _draw_bg_grid(self):
+        self.screen.blit(self.bg_grid_surf, (0, 0))
 
     def _draw_tracks(self, alpha=255):
         for i, x in enumerate(TRACK_X):
@@ -307,12 +463,24 @@ class Renderer:
             pygame.draw.line(self.screen, (*LINE_COLOR, alpha),
                              (x + TRACK_W // 2, 0), (x + TRACK_W // 2, SCREEN_H), 1)
 
+    def _draw_miss_lane_flashes(self):
+        """Desenha flash vermelho nas trilhas com erros ativos."""
+        for eff in self._miss_effects:
+            if not eff['active'] or eff['lane_alpha'] <= 0:
+                continue
+            surf = self.miss_lane_surfs[eff['lane']]
+            surf.set_alpha(eff['lane_alpha'])
+            self.screen.blit(surf, (eff['x'] - TRACK_W // 2, 0))
+
     def _draw_hit_zone(self, active_tracks=None):
-        """Desenha a linha da hit zone e os indicadores de botao.
-        active_tracks: set de indices de trilha com botao pressionado agora.
-        """
+        """Desenha a linha da hit zone (pulsante) e os indicadores de botao."""
+        ticks = pygame.time.get_ticks()
+        pulse = 0.5 + 0.5 * math.sin(ticks * 0.003)
+        b = int(80 + 80 * pulse)
+        hit_col = (b // 2, b // 2, b)
+
         for offset, a in [(3, 40), (2, 80), (1, 160), (0, 255)]:
-            color = (*HIT_LINE_COL, a) if offset else HIT_LINE_COL
+            color = (*hit_col, a) if offset else hit_col
             pygame.draw.line(self.screen, color,
                              (0, HIT_Y + offset), (SCREEN_W, HIT_Y + offset), 1)
 
@@ -321,8 +489,6 @@ class Renderer:
         for i, x in enumerate(TRACK_X):
             surf = self.btn_on[i] if (active_tracks and i in active_tracks) else self.btn_off[i]
             self.screen.blit(surf, (x - size // 2, HIT_Y - size // 2))
-            label = self.font(22).render(TRACK_LABELS[i], True, TRACK_COLORS[i])
-            self.screen.blit(label, label.get_rect(center=(x, HIT_Y + r + 12)))
 
     def _draw_notes(self, notes):
         for i, track in enumerate(notes):
@@ -333,17 +499,91 @@ class Renderer:
                         (TRACK_X[i] - GLOW_CENTER, y - GLOW_CENTER)
                     )
 
+    def _draw_hit_effects(self):
+        """Desenha burst de acerto: flash central, aneis e particulas."""
+        self.scratch.fill((0, 0, 0, 0))
+        drawn = False
+
+        for eff in self._hit_effects:
+            if not eff['active']:
+                continue
+            color = eff['color']
+            x, y  = eff['x'], eff['y']
+
+            # Flash central
+            if eff['flash_alpha'] > 0:
+                pygame.draw.circle(self.scratch, (*color, eff['flash_alpha']),
+                                   (x, y), 28)
+                pygame.draw.circle(self.scratch, (255, 255, 255, eff['flash_alpha'] // 2),
+                                   (x, y), 14)
+                drawn = True
+
+            # Aneis expansivos
+            for ring in eff['rings']:
+                if eff['age'] >= ring['delay'] and ring['alpha'] > 0:
+                    pygame.draw.circle(self.scratch, (*color, ring['alpha']),
+                                       (x, y), ring['r'], 3)
+                    drawn = True
+
+            # Particulas
+            for p in eff['particles']:
+                if p['alpha'] > 0:
+                    px, py = int(p['px']), int(p['py'])
+                    pygame.draw.circle(self.scratch, (*color, p['alpha']),
+                                       (px, py), p['size'])
+                    drawn = True
+
+        if drawn:
+            self.screen.blit(self.scratch, (0, 0))
+
+    def _draw_miss_vignettes(self):
+        """Desenha vinheta vermelha nas bordas para erros ativos."""
+        for eff in self._miss_effects:
+            if not eff['active'] or eff['vignette_alpha'] <= 0:
+                continue
+            a = eff['vignette_alpha']
+            self.scratch.fill((0, 0, 0, 0))
+            c = (200, 0, 0, a)
+            pygame.draw.rect(self.scratch, c, (0, 0, 60, SCREEN_H))
+            pygame.draw.rect(self.scratch, c, (SCREEN_W - 60, 0, 60, SCREEN_H))
+            pygame.draw.rect(self.scratch, c, (0, 0, SCREEN_W, 40))
+            pygame.draw.rect(self.scratch, c, (0, SCREEN_H - 60, SCREEN_W, 60))
+            self.screen.blit(self.scratch, (0, 0))
+
     def _draw_hud(self, score, misses, combo):
+        self.screen.blit(self.score_backdrop, (8, 8))
+
         score_txt = self.font(36).render(f"SCORE  {score:06d}", True, (200, 200, 255))
         self.screen.blit(score_txt, (20, 16))
 
         miss_color = (255, 80, 80) if misses > 5 else (150, 150, 200)
         miss_txt = self.font(28).render(f"ERROS {misses}/{MAX_MISSES}", True, miss_color)
-        self.screen.blit(miss_txt, (20, 54))
+        self.screen.blit(miss_txt, (20, 52))
 
         if combo >= 3:
-            combo_txt = self.font(36).render(f"COMBO x{combo}", True, (255, 220, 0))
-            self.screen.blit(combo_txt, combo_txt.get_rect(topright=(SCREEN_W - 20, 16)))
+            ticks = pygame.time.get_ticks()
+            if combo >= 20:
+                size   = 52
+                color  = (255, 255, 200)
+                shadow = (180, 120, 0)
+                wobble = int(3 * math.sin(ticks * 0.015))
+            elif combo >= 10:
+                size   = 44
+                color  = (255, 160, 0)
+                shadow = None
+                wobble = int(2 * math.sin(ticks * 0.01))
+            else:
+                size   = 36
+                color  = (255, 220, 0)
+                shadow = None
+                wobble = 0
+
+            combo_txt = self.font(size).render(f"COMBO x{combo}", True, color)
+            base_rect = combo_txt.get_rect(topright=(SCREEN_W - 20 + wobble, 16))
+            if shadow:
+                shadow_surf = self.font(size).render(f"COMBO x{combo}", True, shadow)
+                self.screen.blit(shadow_surf, (base_rect.x + 2, base_rect.y + 2))
+            self.screen.blit(combo_txt, base_rect)
 
         status_color = (0, 255, 100) if self.serial.connected else (100, 100, 100)
         status_label = "FPGA ON" if self.serial.connected else "FPGA OFF"
@@ -354,16 +594,25 @@ class Renderer:
 
     def _draw_idle(self):
         self.screen.fill(BG_COLOR)
+        self._draw_bg_grid()
+        self._draw_tracks(alpha=18)
+        self._draw_idle_anim()
+        self.screen.blit(self.scanline_surf, (0, 0))
+
+        # Titulo com glow pulsante
+        ticks = pygame.time.get_ticks()
+        pulse = 0.5 + 0.5 * math.sin(ticks * 0.002)
+        glow_alpha = int(60 + 80 * pulse)
         title = self.font(110).render('Beat by Bit', True, (220, 40, 40))
         glow_s = pygame.Surface(title.get_size(), pygame.SRCALPHA)
         glow_title = self.font(110).render('Beat by Bit', True, (255, 80, 80))
         glow_s.blit(glow_title, (0, 0))
-        glow_s.set_alpha(80)
+        glow_s.set_alpha(glow_alpha)
         rect = title.get_rect(center=(SCREEN_W // 2, 200))
-        self.screen.blit(glow_s, (rect.x - 3, rect.y + 3))
+        self.screen.blit(glow_s, (rect.x - 4, rect.y + 4))
         self.screen.blit(title, rect)
 
-        if pygame.time.get_ticks() % 1000 < 650:
+        if ticks % 1000 < 650:
             sub = self.font(50).render('Aperte START para jogar', True, (255, 220, 0))
             self.screen.blit(sub, sub.get_rect(center=(SCREEN_W // 2, 360)))
 
@@ -381,11 +630,16 @@ class Renderer:
 
     def _draw_play(self, notes, score, misses, combo):
         self.screen.fill(BG_COLOR)
-        self._draw_tracks()
-        self._draw_notes(notes)
-        self._draw_hit_zone()
-        self._update_draw_effects()
-        self._draw_hud(score, misses, combo)
+        self._draw_bg_grid()              # 1. grid horizontal sutil
+        self._draw_tracks()               # 2. trilhas + bordas verticais
+        self._draw_miss_lane_flashes()    # 3. flash vermelho de erro (sob as notas)
+        self._draw_notes(notes)           # 4. notas com glow
+        self._draw_hit_zone()             # 5. linha pulsante + botoes (sem letras)
+        self._advance_effects()           # 6. avanca estado dos efeitos
+        self._draw_hit_effects()          # 7. burst: aneis + particulas + flash
+        self._draw_hud(score, misses, combo)  # 8. painel HUD
+        self._draw_miss_vignettes()       # 9. vinheta vermelha nas bordas
+        self.screen.blit(self.scanline_surf, (0, 0))  # 10. scanlines CRT
 
     def _draw_pause(self):
         self.screen.fill(BG_COLOR)
@@ -429,10 +683,8 @@ class Renderer:
                     pygame.quit()
                     exit()
 
-            # Atualiza estado a partir dos pacotes UART recebidos da FPGA
             self._process_serial()
 
-            # Renderiza conforme estado atual da FPGA
             s = self.fpga_state
             if s == STATE_IDLE:
                 self._draw_idle()
