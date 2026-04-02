@@ -23,12 +23,14 @@ Conversao age -> Y: y = age * NOTE_SPEED  (NOTE_SPEED=4)
 
 import pygame
 pygame.init()
+pygame.mixer.init(frequency=44100, size=-16, channels=1, buffer=512)
 
 import threading
 import queue
 import argparse
 import math
 import random
+import os
 from sys import exit
 
 try:
@@ -54,7 +56,7 @@ TRACK_COLORS = [
     (255, 220,   0),  # amarelo
     (  0, 180, 255),  # azul
     (  0, 255, 100),  # verde
-    (255,  50,  50),  # vermelho
+    (255, 255, 255),  # branco
 ]
 
 BG_COLOR     = (10,  10,  20)
@@ -199,6 +201,8 @@ class Renderer:
         self._hit_effects  = []   # burst de acerto
         self._miss_effects = []   # flash vermelho de erro
         self._prev_notes   = [[], [], [], []]
+        self._prev_score   = 0
+        self._prev_combo   = 0
 
         # Surface scratch reutilizavel (evita alocacao por frame)
         self.scratch = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
@@ -215,6 +219,43 @@ class Renderer:
         self._build_score_backdrop()
         self._build_ghost_note_surfs()
         self._init_idle_anim()
+        self._init_music()
+
+    # ── Musica ────────────────────────────────────────────────────────────────
+
+    _MUSIC_PATH = 'assets/music/bg_music.wav'
+
+    def _init_music(self):
+        """Gera (se necessario) e carrega a musica de fundo."""
+        self._music_ok = False
+        if not os.path.exists(self._MUSIC_PATH):
+            try:
+                import music_gen
+                music_gen.generate(self._MUSIC_PATH)
+            except Exception as e:
+                print(f'[music] Falha ao gerar musica: {e}')
+                return
+        try:
+            pygame.mixer.music.load(self._MUSIC_PATH)
+            pygame.mixer.music.set_volume(0.55)
+            self._music_ok = True
+        except Exception as e:
+            print(f'[music] Falha ao carregar musica: {e}')
+
+    def _update_music(self, state):
+        """Controla reproducao com base no estado do jogo."""
+        if not self._music_ok:
+            return
+        playing = pygame.mixer.music.get_busy()
+        if state in (STATE_COUNTDOWN, STATE_PLAY):
+            if not playing:
+                pygame.mixer.music.play(-1)   # loop infinito
+        elif state == STATE_PAUSE:
+            if playing:
+                pygame.mixer.music.pause()
+        else:  # IDLE, WIN, LOSE
+            if playing:
+                pygame.mixer.music.stop()
 
     # ── Pre-renderizacao ──────────────────────────────────────────────────────
 
@@ -232,16 +273,20 @@ class Renderer:
     def _build_btn_surfaces(self):
         r    = NOTE_RADIUS + 4
         size = r * 2 + 4
+        self.btn_size = size
         self.btn_off = []
         self.btn_on  = []
+        pad = 4  # margem interna para o retangulo
         for color in TRACK_COLORS:
+            # OFF: borda pixelada semi-transparente
             off = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.circle(off, (*color, 80), (size // 2, size // 2), r, 3)
+            pygame.draw.rect(off, (*color, 80), (pad, pad, size - pad * 2, size - pad * 2), 3)
             self.btn_off.append(off)
+            # ON: glow externo + preenchido + borda branca
             on = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.circle(on, (*color, 200), (size // 2, size // 2), r + 6)
-            pygame.draw.circle(on, color,          (size // 2, size // 2), r)
-            pygame.draw.circle(on, (255, 255, 255), (size // 2, size // 2), r, 2)
+            pygame.draw.rect(on, (*color, 200), (0, 0, size, size))
+            pygame.draw.rect(on, color, (pad, pad, size - pad * 2, size - pad * 2))
+            pygame.draw.rect(on, (255, 255, 255), (pad, pad, size - pad * 2, size - pad * 2), 2)
             self.btn_on.append(on)
 
     def _build_scanline_surf(self):
@@ -357,6 +402,8 @@ class Renderer:
             if pkt is None:
                 break
             self._prev_notes = [list(t) for t in self.fpga_notes]
+            self._prev_score = self.fpga_score
+            self._prev_combo = self.fpga_combo
             self.fpga_state     = pkt['state']
             self.fpga_countdown = pkt['countdown']
             self.fpga_notes     = pkt['notes']
@@ -367,12 +414,14 @@ class Renderer:
 
     def _detect_note_events(self):
         """Detecta notas que sumiram e cria efeito de acerto ou erro."""
+        scored = (self.fpga_score > self._prev_score
+                  or self.fpga_combo > self._prev_combo)
         for i in range(4):
             prev_set = set(self._prev_notes[i])
             curr_set = set(self.fpga_notes[i])
             for y in prev_set - curr_set:
-                if abs(y - HIT_Y) <= 60:
-                    # Nota sumiu perto da hit zone → acerto
+                if abs(y - HIT_Y) <= 60 and scored:
+                    # Nota sumiu perto da hit zone E score/combo subiu → acerto
                     self._spawn_hit_effect(i, TRACK_X[i], HIT_Y)
                 elif y > HIT_Y + 60:
                     # Nota sumiu abaixo da hit zone → erro
@@ -686,6 +735,8 @@ class Renderer:
             self._process_serial()
 
             s = self.fpga_state
+            self._update_music(s)
+
             if s == STATE_IDLE:
                 self._draw_idle()
             elif s == STATE_COUNTDOWN:

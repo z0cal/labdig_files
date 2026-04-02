@@ -165,9 +165,9 @@ module fluxo_dados (
 
     // Spawn tick: uma nota por vez, nunca 2 notas pressiveis em trilhas diferentes.
     // SPAWN_INTERVAL_FRAMES > MISS_AGE (152) => ciclo efetivo = SPAWN_INTERVAL_FRAMES.
-    // 360 frames = 6 s entre notas @ 60fps.
-    localparam integer SPAWN_INTERVAL_FRAMES = 360;  // 6s @ 60fps
-    localparam [3:0]  MAX_ACTIVE_NOTES      = 4'd1;
+    // 60 frames = 1 s entre notas @ 60fps (modo de teste).
+    localparam integer SPAWN_INTERVAL_FRAMES = 60;   // 1s @ 60fps (TESTE)
+    localparam [3:0]  MAX_ACTIVE_NOTES      = 4'd4;
     reg [8:0] spawn_cnt;  // 9 bits: alcanca ate 511, suficiente para 359
     always @(posedge clock or posedge reset) begin
         if (reset) begin
@@ -233,8 +233,8 @@ module fluxo_dados (
         (t2n0 != 8'hFF) + (t2n1 != 8'hFF) + (t2n2 != 8'hFF) +
         (t3n0 != 8'hFF) + (t3n1 != 8'hFF) + (t3n2 != 8'hFF);
 
-    // Escolhe entre trilha 0 e 1 (unicas com botoes fisicos disponiveis).
-    wire [3:0] spawn_select = 4'b0001 << lfsr_val[0];
+    // Escolhe entre todas as 4 trilhas para teste de botoes.
+    wire [3:0] spawn_select = 4'b0001 << lfsr_val[1:0];
     wire       allow_spawn  = (active_note_count < MAX_ACTIVE_NOTES);
 
     assign spawn_en = (spawn_tick && allow_spawn) ? (spawn_select & track_empty) : 4'b0000;

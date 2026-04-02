@@ -14,8 +14,13 @@ module beat_by_bit (
     output wire [6:0]  db_estado,    // HEX0: Estado da FSM
     output wire [6:0]  db_jogada,    // HEX1: Ultimo botao pressionado
     output wire [4:0]  leds_pulsos,  // LEDs de debug
+    output wire [4:0]  db_botoes_raw,// Debug: botoes crus (LEDR 5-9)
     output wire        uart_tx_out   // TX serial para o PC (115200 baud)
 );
+
+    // Reset invertido: o pino GPIO tem pull-up (1 quando solto),
+    // mas o circuito usa reset ativo em 1, entao invertemos.
+    wire reset_i = ~reset;
 
     // Fios entre UC e FD
     wire s_registraR, s_limpaR;
@@ -36,12 +41,15 @@ module beat_by_bit (
 
     assign leds_pulsos = {s_start_pulso, s_fim_contagem, s_fim_tempo, s_perdeu, s_jogada_feita};
 
+    // Debug: sinais crus dos botoes (antes do debounce) nos LEDR 5-9
+    assign db_botoes_raw = botoes;
+
     // ----------------------------------------------------------------
     // Unidade de Controle (FSM)
     // ----------------------------------------------------------------
     unidade_controle u_uc (
         .clock       (clock),
-        .reset       (reset),
+        .reset       (reset_i),
         .start       (s_start_pulso),
         .jogada      (s_jogada_feita),
         .fim_contagem(s_fim_contagem),
@@ -60,7 +68,7 @@ module beat_by_bit (
     // ----------------------------------------------------------------
     fluxo_dados u_fd (
         .clock        (clock),
-        .reset        (reset),
+        .reset        (reset_i),
         .limpaR       (s_limpaR),
         .registraR    (s_registraR),
         .zera_timer   (s_zera_timer),
@@ -90,7 +98,7 @@ module beat_by_bit (
     // ----------------------------------------------------------------
     packet_sender u_pkt (
         .clock        (clock),
-        .reset        (reset),
+        .reset        (reset_i),
         .frame_tick   (s_frame_tick),
         .game_state   (s_estado),
         .countdown_sec(s_countdown_sec),

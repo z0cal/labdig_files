@@ -29,7 +29,7 @@ module beat_by_bit_de0_cv (
     input  wire       KEY3,
     output wire [6:0] HEX0,
     output wire [6:0] HEX1,
-    output wire [4:0] LEDR,
+    output wire [9:0] LEDR,
     output wire       GPIO_0_D0
 );
 
@@ -55,7 +55,13 @@ module beat_by_bit_de0_cv (
 
     assign HEX0      = db_estado;
     assign HEX1      = db_jogada;
-    assign LEDR      = leds_pulsos;
+    assign LEDR[4:0] = leds_pulsos;
+    // Debug: sinais crus dos botoes (antes do debounce)
+    assign LEDR[5]   = ~KEY2;  // trilha 0 cru
+    assign LEDR[6]   = ~KEY3;  // trilha 1 cru
+    assign LEDR[7]   = ~KEY1;  // start cru
+    assign LEDR[8]   = ~KEY0;  // reset cru
+    assign LEDR[9]   = 1'b0;
     assign GPIO_0_D0 = uart_tx_out;
 
 endmodule
