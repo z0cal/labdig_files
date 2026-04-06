@@ -332,54 +332,66 @@ class Renderer:
             self.ghost_note_surfs.append(s)
 
     def _init_idle_anim(self):
-        """Inicializa estado da animacao de fundo da tela idle."""
-        self._idle_notes = []
-        for lane in range(4):
-            for _ in range(4):
-                self._idle_notes.append({
-                    'lane': lane,
-                    'y': float(random.randint(-SCREEN_H, SCREEN_H)),
-                    'speed': random.uniform(0.8, 2.0),
-                })
+        """Inicializa estado do Game of Life para a tela idle."""
+        self._gol_cell_size = 20
+        self._gol_cols = SCREEN_W // self._gol_cell_size
+        self._gol_rows = SCREEN_H // self._gol_cell_size
+        self._gol_grid = [[1 if random.random() < 0.2 else 0 
+                           for _ in range(self._gol_cols)] 
+                          for _ in range(self._gol_rows)]
+        self._gol_last_update = 0
+        self._gol_update_interval = 150 # ms
 
-        self._idle_stars = []
-        for _ in range(90):
-            self._idle_stars.append({
-                'x': float(random.randint(0, SCREEN_W)),
-                'y': float(random.randint(0, SCREEN_H)),
-                'vy': random.uniform(0.15, 0.55),
-                'size': random.choice([1, 1, 1, 2, 2, 3]),
-                'base_alpha': random.randint(40, 160),
-                'phase': random.uniform(0, math.pi * 2),
-            })
+    def _update_gol(self):
+        new_grid = [[0 for _ in range(self._gol_cols)] for _ in range(self._gol_rows)]
+        total_alive = 0
+        for r in range(self._gol_rows):
+            for c in range(self._gol_cols):
+                alive = self._gol_grid[r][c]
+                neighbors = 0
+                for dr in [-1, 0, 1]:
+                    for dc in [-1, 0, 1]:
+                        if dr == 0 and dc == 0:
+                            continue
+                        nr = (r + dr) % self._gol_rows
+                        nc = (c + dc) % self._gol_cols
+                        neighbors += self._gol_grid[nr][nc]
+                if alive and (neighbors == 2 or neighbors == 3):
+                    new_grid[r][c] = 1
+                    total_alive += 1
+                elif not alive and neighbors == 3:
+                    new_grid[r][c] = 1
+                    total_alive += 1
+                    
+        # Reiniciar aleatoriamente se a tela ficar muito vazia
+        if total_alive < (self._gol_cols * self._gol_rows) * 0.05:
+             for r in range(self._gol_rows):
+                 for c in range(self._gol_cols):
+                     if random.random() < 0.1:
+                         new_grid[r][c] = 1
+                         
+        self._gol_grid = new_grid
 
     def _draw_idle_anim(self):
-        """Atualiza e desenha a animacao de fundo da tela idle."""
-        ticks = pygame.time.get_ticks() * 0.001
+        """Atualiza e desenha a animacao de fundo da tela idle (Game of Life)."""
+        ticks = pygame.time.get_ticks()
+        if ticks - self._gol_last_update > self._gol_update_interval:
+            self._update_gol()
+            self._gol_last_update = ticks
 
-        # Estrelas flutuando para cima com twinkle
-        for star in self._idle_stars:
-            star['y'] -= star['vy']
-            if star['y'] < -4:
-                star['y'] = float(SCREEN_H + 4)
-                star['x'] = float(random.randint(0, SCREEN_W))
-            alpha = int(star['base_alpha'] * (0.5 + 0.5 * math.sin(ticks * 2.1 + star['phase'])))
-            color = (alpha, alpha, min(255, alpha + 60))
-            pygame.draw.circle(self.screen, color,
-                               (int(star['x']), int(star['y'])), star['size'])
-
-        # Notas fantasma caindo nas trilhas
-        for note in self._idle_notes:
-            note['y'] += note['speed']
-            if note['y'] > SCREEN_H + GLOW_CENTER:
-                note['y'] = float(random.randint(-200, -GLOW_CENTER))
-                note['speed'] = random.uniform(0.8, 2.0)
-            y = int(note['y'])
-            lane = note['lane']
-            self.screen.blit(
-                self.ghost_note_surfs[lane],
-                (TRACK_X[lane] - GLOW_CENTER, y - GLOW_CENTER),
-            )
+        self.scratch.fill((0, 0, 0, 0))
+        color = (0, 180, 255, 60) # Azul neon com transparencia
+        
+        for r in range(self._gol_rows):
+            for c in range(self._gol_cols):
+                if self._gol_grid[r][c]:
+                    x = c * self._gol_cell_size
+                    y = r * self._gol_cell_size
+                    pygame.draw.rect(self.scratch, color, 
+                                     (x + 2, y + 2, self._gol_cell_size - 4, self._gol_cell_size - 4), 
+                                     border_radius=4)
+                    
+        self.screen.blit(self.scratch, (0, 0))
 
     # ── Fontes ────────────────────────────────────────────────────────────────
 
