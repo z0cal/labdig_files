@@ -262,7 +262,10 @@ class Renderer:
     @staticmethod
     def _generate_wav(path):
         """Sintetiza Concerning Hobbits e salva em WAV."""
-        import numpy as np, wave as _wave
+        try:
+            import numpy as np, wave as _wave
+        except ImportError:
+            raise RuntimeError("Biblioteca 'numpy' necessaria para gerar o audio. Instale executando: pip install numpy")
         SR   = 44100
         beat = 0.6  # BPM=100
         CH_SEQ = [
@@ -350,18 +353,27 @@ class Renderer:
 
     def _update_music(self, state):
         """Controla reproducao com base no estado da FPGA."""
-        if not self._music_ok:
+        if not getattr(self, '_music_ok', False):
             return
+            
+        if not hasattr(self, '_music_paused'):
+            self._music_paused = False
+
         playing = pygame.mixer.music.get_busy()
         if state == STATE_PLAY:
-            if not playing:
+            if self._music_paused:
+                pygame.mixer.music.unpause()
+                self._music_paused = False
+            elif not playing:
                 pygame.mixer.music.play()   # inicia apenas em PLAY, sem loop
         elif state == STATE_PAUSE:
-            if playing:
+            if playing and not self._music_paused:
                 pygame.mixer.music.pause()
+                self._music_paused = True
         else:  # IDLE, SELECT, COUNTDOWN, WIN, LOSE
-            if playing:
+            if playing or self._music_paused:
                 pygame.mixer.music.stop()
+                self._music_paused = False
 
     # ── Pre-renderizacao ──────────────────────────────────────────────────────
 
