@@ -24,7 +24,7 @@ module beat_by_bit (
 
     // Fios entre UC e FD
     wire s_registraR, s_limpaR;
-    wire s_jogada_feita, s_start_pulso;
+    wire s_jogada_feita, s_start_pulso, s_song_ok;
     wire s_fim_contagem, s_fim_tempo, s_perdeu;
     wire s_zera_timer, s_conta_timer, s_game_active;
     wire [3:0] s_estado, s_valor_jogada;
@@ -51,6 +51,7 @@ module beat_by_bit (
         .clock       (clock),
         .reset       (reset_i),
         .start       (s_start_pulso),
+        .song_ok     (s_song_ok),
         .jogada      (s_jogada_feita),
         .fim_contagem(s_fim_contagem),
         .fim_tempo   (s_fim_tempo),
@@ -78,6 +79,7 @@ module beat_by_bit (
         .botoes_raw   (botoes),
         .jogada_feita (s_jogada_feita),
         .start_pulso  (s_start_pulso),
+        .song_ok_pulso(s_song_ok),
         .fim_contagem (s_fim_contagem),
         .fim_tempo    (s_fim_tempo),
         .perdeu       (s_perdeu),

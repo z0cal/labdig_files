@@ -67,12 +67,28 @@ HIT_LINE_COL = (80,  80, 140)
 MAX_MISSES   = 10
 
 # Estados da FPGA (devem ser iguais aos estados da UC em Verilog)
-STATE_IDLE      = 0
-STATE_COUNTDOWN = 1
-STATE_PLAY      = 2
-STATE_PAUSE     = 3
-STATE_WIN       = 4
-STATE_LOSE      = 5
+STATE_IDLE        = 0
+STATE_COUNTDOWN   = 1
+STATE_PLAY        = 2
+STATE_PAUSE       = 3
+STATE_WIN         = 4
+STATE_LOSE        = 5
+STATE_SONG_SELECT = 6
+
+SONG_DURATION_MS  = 73_800   # duracao total do chart de Concerning Hobbits
+
+SONGS = [
+    {
+        'title':    'Concerning Hobbits',
+        'subtitle': 'The Lord of the Rings',
+        'author':   'Howard Shore',
+        'audio':    'assets/music/concerning_hobbits.wav',
+        'available': True,
+    },
+    {'title': '???', 'subtitle': 'Em breve...', 'author': '', 'available': False},
+    {'title': '???', 'subtitle': 'Em breve...', 'author': '', 'available': False},
+    {'title': '???', 'subtitle': 'Em breve...', 'author': '', 'available': False},
+]
 
 PACKET_SIZE = 20
 PKT_HEADER  = 0x55
@@ -223,37 +239,127 @@ class Renderer:
 
     # ── Musica ────────────────────────────────────────────────────────────────
 
-    _MUSIC_PATH = 'assets/music/bg_music.wav'
+    _MUSIC_PATH = 'assets/music/concerning_hobbits.wav'
 
     def _init_music(self):
-        """Gera (se necessario) e carrega a musica de fundo."""
+        """Gera (se necessario) e carrega Concerning Hobbits."""
         self._music_ok = False
         if not os.path.exists(self._MUSIC_PATH):
+            print('[music] Gerando concerning_hobbits.wav por sintese...')
             try:
-                import music_gen
-                music_gen.generate(self._MUSIC_PATH)
+                self._generate_wav(self._MUSIC_PATH)
             except Exception as e:
                 print(f'[music] Falha ao gerar musica: {e}')
                 return
         try:
             pygame.mixer.music.load(self._MUSIC_PATH)
-            pygame.mixer.music.set_volume(0.55)
+            pygame.mixer.music.set_volume(0.70)
             self._music_ok = True
+            print(f'[music] Carregado: {self._MUSIC_PATH}')
         except Exception as e:
             print(f'[music] Falha ao carregar musica: {e}')
 
+    @staticmethod
+    def _generate_wav(path):
+        """Sintetiza Concerning Hobbits e salva em WAV."""
+        import numpy as np, wave as _wave
+        SR   = 44100
+        beat = 0.6  # BPM=100
+        CH_SEQ = [
+            ('R',4),('R',4),
+            ('A4',1),('B4',1),('D5',1),('B4',1),
+            ('A4',1.5),('G4',0.5),('A4',1),('R',1),
+            ('D5',2),('A4',0.5),('G4',0.5),('F#4',1),
+            ('G4',2.5),('R',0.5),('A4',1),
+            ('A4',1),('B4',1),('D5',1),('B4',1),
+            ('A4',1.5),('G4',0.5),('F#4',2),
+            ('G4',1),('A4',1),('B4',2),('A4',4),
+            ('D5',1),('E5',1),('F#5',1),('D5',1),
+            ('E5',2),('C#5',2),
+            ('D5',1),('C#5',1),('B4',2),('A4',4),
+            ('D5',1),('A4',1),('G4',1),('F#4',1),
+            ('E4',1),('F#4',1),('G4',2),
+            ('A4',2),('B4',2),
+            ('D5',1),('C#5',1),('B4',1),('A4',1),
+            ('G4',2),('A4',2),
+            ('B4',1),('A4',1),('G4',2),
+            ('F#4',2),('E4',2),
+            ('D5',1),('D5',1),('E5',1),('F#5',1),('G5',4),
+            ('A4',1),('B4',1),('D5',1),('B4',1),
+            ('A4',1.5),('G4',0.5),('A4',2),
+            ('D5',1),('C#5',1),('B4',2),('A4',4),
+            ('D5',2),('G4',2),('D4',6),
+        ]
+        NF = {
+            'D3':146.83,'G3':196.00,'A3':220.00,'B3':246.94,
+            'D4':293.66,'E4':329.63,'F#4':369.99,'G4':392.00,
+            'A4':440.00,'B4':493.88,'C#5':554.37,'D5':587.33,
+            'E5':659.25,'F#5':739.99,'G5':783.99,
+        }
+        HARM = {
+            'A4':'F#4','B4':'G4','D5':'B4','G4':'E4','F#4':'D4',
+            'D4':'B3','E4':'C#5','C#5':'A4','E5':'C#5','F#5':'D5','G5':'E5',
+        }
+        total = sum(b for _,b in CH_SEQ)
+        N = int((total*beat+3.0)*SR)
+        buf = np.zeros(N,np.float32)
+        def tone(freq,n):
+            t=np.arange(n)/SR
+            return (np.sin(2*np.pi*freq*t)+0.50*np.sin(4*np.pi*freq*t)
+                    +0.20*np.sin(6*np.pi*freq*t)+0.08*np.sin(8*np.pi*freq*t))/1.78
+        def tri(freq,n):
+            t=np.arange(n)/SR
+            return 2*np.abs(2*(t*freq%1)-1)-1
+        def env(n,rel=0.25):
+            e=np.ones(n,np.float32); a=min(int(0.01*SR),n); r=min(int(rel*n),n)
+            if a: e[:a]=np.linspace(0,1,a)
+            if r: e[-r:]*=np.linspace(1,0,r)
+            return e
+        t=0.0
+        for note,beats in CH_SEQ:
+            n=int(beats*beat*SR); s=int(t*SR)
+            if note!='R' and note in NF:
+                nr=min(n,N-s)
+                if nr>0: buf[s:s+nr]+=tone(NF[note],nr)*env(nr)*0.55
+            t+=beats*beat
+        t=0.0
+        for note,beats in CH_SEQ:
+            n=int(beats*beat*SR); s=int(t*SR)
+            h=HARM.get(note)
+            if h and h in NF:
+                nr=min(n,N-s)
+                if nr>0: buf[s:s+nr]+=tone(NF[h],nr)*env(nr,0.30)*0.22
+            t+=beats*beat
+        BASS=[('D3',1),('R',1),('A3',1),('R',1)]
+        tb,bb,lim=0.0,0,int(total)+8
+        while bb<lim:
+            for bn,bb2 in BASS:
+                if bb>=lim: break
+                n=int(bb2*beat*SR); s=int(tb*SR)
+                if bn!='R' and bn in NF:
+                    nr=min(n,N-s)
+                    if nr>0: buf[s:s+nr]+=tri(NF[bn],nr)*env(nr,0.4)*0.20
+                tb+=bb2*beat; bb+=bb2
+        pk=np.max(np.abs(buf))
+        if pk>0: buf=buf/pk*0.85
+        pcm=(buf*32767).astype(np.int16)
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        with _wave.open(path,'wb') as wf:
+            wf.setnchannels(1); wf.setsampwidth(2)
+            wf.setframerate(SR); wf.writeframes(pcm.tobytes())
+
     def _update_music(self, state):
-        """Controla reproducao com base no estado do jogo."""
+        """Controla reproducao com base no estado da FPGA."""
         if not self._music_ok:
             return
         playing = pygame.mixer.music.get_busy()
-        if state in (STATE_COUNTDOWN, STATE_PLAY):
+        if state == STATE_PLAY:
             if not playing:
-                pygame.mixer.music.play(-1)   # loop infinito
+                pygame.mixer.music.play()   # inicia apenas em PLAY, sem loop
         elif state == STATE_PAUSE:
             if playing:
                 pygame.mixer.music.pause()
-        else:  # IDLE, WIN, LOSE
+        else:  # IDLE, SELECT, COUNTDOWN, WIN, LOSE
             if playing:
                 pygame.mixer.music.stop()
 
@@ -656,6 +762,17 @@ class Renderer:
         status_txt = self.font(20).render(status_label, True, status_color)
         self.screen.blit(status_txt, status_txt.get_rect(topright=(SCREEN_W - 20, 54)))
 
+        # Barra de progresso da musica
+        if self._music_ok and self.fpga_state == STATE_PLAY:
+            pos_ms = pygame.mixer.music.get_pos()
+            if pos_ms >= 0:
+                ratio = min(1.0, pos_ms / SONG_DURATION_MS)
+                bw = SCREEN_W - 40
+                pygame.draw.rect(self.screen, (30, 30, 70),
+                                 (20, SCREEN_H - 14, bw, 8), border_radius=4)
+                pygame.draw.rect(self.screen, (100, 120, 255),
+                                 (20, SCREEN_H - 14, int(bw * ratio), 8), border_radius=4)
+
     # ── Telas ─────────────────────────────────────────────────────────────────
 
     def _draw_idle(self):
@@ -685,6 +802,99 @@ class Renderer:
         hint = self.font(30).render('FPGA: botoes 0-3 = trilhas  |  botao 4 = START', True, (80, 80, 120))
         self.screen.blit(hint, hint.get_rect(center=(SCREEN_W // 2, 540)))
 
+    def _wrap_text(self, text, size, max_w):
+        """Quebra texto em linhas que cabem em max_w pixels."""
+        words = text.split()
+        lines, current = [], ''
+        f = self.font(size)
+        for w in words:
+            test = (current + ' ' + w).strip()
+            if f.size(test)[0] <= max_w:
+                current = test
+            else:
+                if current:
+                    lines.append(current)
+                current = w
+        if current:
+            lines.append(current)
+        return lines
+
+    def _draw_song_select(self):
+        """Tela de selecao de musica: 4 caixas alinhadas com as trilhas."""
+        self.screen.fill(BG_COLOR)
+        self._draw_bg_grid()
+        self._draw_tracks(alpha=18)
+        self.screen.blit(self.scanline_surf, (0, 0))
+
+        now = pygame.time.get_ticks()
+
+        # Titulo
+        title = self.font(52).render('SELECIONAR MUSICA', True, (200, 200, 255))
+        self.screen.blit(title, title.get_rect(center=(SCREEN_W // 2, 55)))
+
+        BOX_W, BOX_H = 118, 230
+        BOX_TOP = 120
+
+        for i, song in enumerate(SONGS):
+            cx    = TRACK_X[i]
+            color = TRACK_COLORS[i]
+            avail = song['available']
+
+            box_rect = pygame.Rect(cx - BOX_W // 2, BOX_TOP, BOX_W, BOX_H)
+
+            # Fundo
+            bg_alpha = 60 if avail else 20
+            bg = pygame.Surface((BOX_W, BOX_H), pygame.SRCALPHA)
+            bg.fill((*color, bg_alpha))
+            self.screen.blit(bg, box_rect.topleft)
+
+            # Pulso na caixa disponivel
+            if avail:
+                pulse = abs((now % 1200) - 600) / 600.0
+                glow_a = int(25 + 35 * pulse)
+                glow_s = pygame.Surface((BOX_W, BOX_H), pygame.SRCALPHA)
+                glow_s.fill((*color, glow_a))
+                self.screen.blit(glow_s, box_rect.topleft)
+
+            # Borda
+            border_col = color if avail else (50, 50, 80)
+            pygame.draw.rect(self.screen, border_col, box_rect, 2 if avail else 1,
+                             border_radius=5)
+
+            # Tecla
+            key_col = color if avail else (70, 70, 100)
+            key_s = self.font(40).render(TRACK_LABELS[i], True, key_col)
+            self.screen.blit(key_s, key_s.get_rect(center=(cx, BOX_TOP + 26)))
+
+            # Separador
+            pygame.draw.line(self.screen, (*border_col, 100),
+                             (cx - BOX_W//2 + 10, BOX_TOP + 46),
+                             (cx + BOX_W//2 - 10, BOX_TOP + 46), 1)
+
+            if avail:
+                y_off = BOX_TOP + 58
+                for line in self._wrap_text(song['title'], 18, BOX_W - 8):
+                    ls = self.font(18).render(line, True, (235, 235, 255))
+                    self.screen.blit(ls, ls.get_rect(center=(cx, y_off)))
+                    y_off += 20
+                y_off += 4
+                for line in self._wrap_text(song['subtitle'], 15, BOX_W - 8):
+                    ls = self.font(15).render(line, True, (160, 160, 200))
+                    self.screen.blit(ls, ls.get_rect(center=(cx, y_off)))
+                    y_off += 17
+                if song.get('author'):
+                    au = self.font(14).render(song['author'], True, (110, 110, 160))
+                    self.screen.blit(au, au.get_rect(center=(cx, y_off + 4)))
+            else:
+                em = self.font(17).render('EM BREVE', True, (70, 70, 100))
+                self.screen.blit(em, em.get_rect(center=(cx, BOX_TOP + BOX_H // 2)))
+
+        # Dica
+        hint = self.font(26).render(
+            'Botao 0 = Concerning Hobbits  |  START = Voltar',
+            True, (65, 65, 105))
+        self.screen.blit(hint, hint.get_rect(center=(SCREEN_W // 2, BOX_TOP + BOX_H + 28)))
+
     def _draw_countdown(self, sec):
         self.screen.fill(BG_COLOR)
         self._draw_tracks()
@@ -693,6 +903,10 @@ class Renderer:
         if sec > 0:
             num = self.font(220).render(str(sec), True, (255, 60, 60))
             self.screen.blit(num, num.get_rect(center=(SCREEN_W // 2, SCREEN_H // 2 - 40)))
+
+        # Nome da musica durante a contagem
+        sn = self.font(28).render('Concerning Hobbits', True, (180, 180, 220))
+        self.screen.blit(sn, sn.get_rect(center=(SCREEN_W // 2, SCREEN_H // 2 + 70)))
 
     def _draw_play(self, notes, score, misses, combo):
         self.screen.fill(BG_COLOR)
@@ -756,6 +970,8 @@ class Renderer:
 
             if s == STATE_IDLE:
                 self._draw_idle()
+            elif s == STATE_SONG_SELECT:
+                self._draw_song_select()
             elif s == STATE_COUNTDOWN:
                 self._draw_countdown(self.fpga_countdown)
             elif s == STATE_PLAY:

@@ -8,16 +8,17 @@
  * Logica implementada:
  *   - Gerador de frame_tick (~60fps com clock de 50MHz)
  *   - Timer de countdown (3 segundos = 180 frames)
- *   - Timer de jogo (60 segundos = 3600 frames)
- *   - LFSR para spawn pseudoaleatorio de notas
+ *   - ROM de chart (concerning_hobbits.hex, 4428 frames ~ 73.8 s)
+ *   - Contador de frames para indexar a ROM
  *   - 4x note_track (um por trilha)
  *   - Contadores de score, misses e combo
  *   - Debounce + deteccao de borda para os botoes
+ *   - Saida song_ok_pulso para selecao de musica na UC
  *-----------------------------------------------------------------------
  * Clock assumido: 50 MHz
  *   frame_tick: M = 833_333 ciclos (= 50MHz / 60fps)
  *   countdown:  180 frames = 3 segundos
- *   game_timer: 3600 frames = 60 segundos
+ *   ROM_DEPTH:  4428 frames = ~73.8 segundos
  *   debounce:   9_000_000 ciclos (= 180ms)
  *-----------------------------------------------------------------------
  */
@@ -30,7 +31,7 @@ module fluxo_dados (
     input  wire       limpaR,
     input  wire       registraR,
     input  wire       zera_timer,
-    input  wire       conta_timer,     // ativo em COUNTDOWN e PLAY (legado)
+    input  wire       conta_timer,     // legado (nao usado ativamente)
     input  wire       game_active,     // ativo so em PLAY
     input  wire [3:0] db_estado,
 
@@ -41,8 +42,9 @@ module fluxo_dados (
     output wire       jogada_feita,
     output wire       start_pulso,
     output wire       fim_contagem,    // fim do countdown (3s)
-    output wire       fim_tempo,       // fim do jogo (60s)
+    output wire       fim_tempo,       // fim do chart
     output wire       perdeu,          // misses >= 10
+    output wire       song_ok_pulso,   // botao 0 pressionado (selecao de musica)
 
     // Saida de debug (display HEX)
     output wire [3:0] s_jogada,
@@ -73,8 +75,6 @@ module fluxo_dados (
 
     // ----------------------------------------------------------------
     // Debounce + pulso imediato: 180ms @ 50MHz = 9_000_000 ciclos.
-    // Esta escolha tambem filtra hits validos na mesma trilha abaixo
-    // desse intervalo, por decisao explicita de projeto.
     // ----------------------------------------------------------------
     localparam integer BTN_DEBOUNCE_CYCLES = 9_000_000;
     wire [3:0] btn_pulse;
@@ -90,7 +90,8 @@ module fluxo_dados (
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_start (.clock(clock), .reset(reset), .sinal(start_raw), .pulso(start_pulso));
 
-    assign jogada_feita = |btn_pulse;
+    assign jogada_feita  = |btn_pulse;
+    assign song_ok_pulso = btn_pulse[0];   // botao 0 = Concerning Hobbits
 
     // ----------------------------------------------------------------
     // Frame tick: 1 pulso por frame (~60fps)
@@ -138,45 +139,33 @@ module fluxo_dados (
     assign countdown_sec = cd_sec_reg;
 
     // ----------------------------------------------------------------
-    // Timer de jogo: 3600 frames = 60 segundos
-    // Conta apenas durante PLAY (game_active)
+    // ROM do chart: concerning_hobbits.hex
+    //   4428 entradas de 4 bits (uma por frame)
+    //   bit[i] = 1 → spawnar nota na trilha i neste frame
     // ----------------------------------------------------------------
-    contador_m #(.M(3600), .N(12)) u_game_timer (
-        .clock  (clock),
-        .zera_as(reset),
-        .zera_s (zera_timer),
-        .conta  (frame_tick && game_active),
-        .Q      (),
-        .fim    (fim_tempo),
-        .meio   ()
-    );
+    localparam integer ROM_DEPTH = 4428;
+
+    reg [3:0] chart_rom [0:ROM_DEPTH-1];
+    initial $readmemh("concerning_hobbits.hex", chart_rom);
 
     // ----------------------------------------------------------------
-    // LFSR: avanca a cada frame_tick para spawn pseudoaleatorio
+    // Contador de frames de jogo (indexa a ROM)
+    //   Incrementa a cada frame_tick enquanto game_active = 1.
+    //   Reseta junto com zera_timer (ao voltar para IDLE/WIN/LOSE).
+    //   Para em ROM_DEPTH-1 para evitar acesso fora da ROM.
     // ----------------------------------------------------------------
-    wire [7:0] lfsr_val;
+    reg [12:0] frame_counter;   // 13 bits: alcanca ate 8191 > 4428
 
-    lfsr8 u_lfsr (
-        .clock    (clock),
-        .reset    (reset),
-        .enable   (frame_tick),
-        .lfsr_out (lfsr_val)
-    );
-
-    // Spawn tick: uma nota por vez, nunca 2 notas pressiveis em trilhas diferentes.
-    // SPAWN_INTERVAL_FRAMES > MISS_AGE (152) => ciclo efetivo = SPAWN_INTERVAL_FRAMES.
-    // 60 frames = 1 s entre notas @ 60fps (modo de teste).
-    localparam integer SPAWN_INTERVAL_FRAMES = 60;   // 1s @ 60fps (TESTE)
-    localparam [3:0]  MAX_ACTIVE_NOTES      = 4'd4;
-    reg [8:0] spawn_cnt;  // 9 bits: alcanca ate 511, suficiente para 359
     always @(posedge clock or posedge reset) begin
-        if (reset) begin
-            spawn_cnt <= 9'd0;
-        end else if (frame_tick && game_active) begin
-            spawn_cnt <= (spawn_cnt == SPAWN_INTERVAL_FRAMES - 1) ? 9'd0 : spawn_cnt + 9'd1;
+        if (reset || zera_timer) begin
+            frame_counter <= 13'd0;
+        end else if (frame_tick && game_active && frame_counter < ROM_DEPTH - 1) begin
+            frame_counter <= frame_counter + 13'd1;
         end
     end
-    wire spawn_tick = frame_tick && game_active && (spawn_cnt == SPAWN_INTERVAL_FRAMES - 1);
+
+    // fim_tempo: dispara quando o ultimo frame do chart e atingido
+    assign fim_tempo = (frame_counter == ROM_DEPTH - 1) && frame_tick && game_active;
 
     // ----------------------------------------------------------------
     // Note tracks (uma por trilha)
@@ -218,35 +207,23 @@ module fluxo_dados (
         .hit_pulse(hit_pulse[3]), .escape_pulse(escape_pulse[3]), .bad_press(bad_press[3])
     );
 
-    // Apenas trilhas vazias podem receber nota nova.
-    wire [3:0] track_empty;
-    assign track_empty[0] = (t0n0 == 8'hFF) && (t0n1 == 8'hFF) && (t0n2 == 8'hFF);
-    assign track_empty[1] = (t1n0 == 8'hFF) && (t1n1 == 8'hFF) && (t1n2 == 8'hFF);
-    assign track_empty[2] = (t2n0 == 8'hFF) && (t2n1 == 8'hFF) && (t2n2 == 8'hFF);
-    assign track_empty[3] = (t3n0 == 8'hFF) && (t3n1 == 8'hFF) && (t3n2 == 8'hFF);
+    // Slot livre por trilha: spawn permitido se qualquer dos 3 slots estiver vazio
+    wire [3:0] track_has_slot;
+    assign track_has_slot[0] = (t0n0 == 8'hFF) || (t0n1 == 8'hFF) || (t0n2 == 8'hFF);
+    assign track_has_slot[1] = (t1n0 == 8'hFF) || (t1n1 == 8'hFF) || (t1n2 == 8'hFF);
+    assign track_has_slot[2] = (t2n0 == 8'hFF) || (t2n1 == 8'hFF) || (t2n2 == 8'hFF);
+    assign track_has_slot[3] = (t3n0 == 8'hFF) || (t3n1 == 8'hFF) || (t3n2 == 8'hFF);
 
-    // Conta notas visiveis para limitar a carga cognitiva.
-    wire [3:0] active_note_count;
-    assign active_note_count =
-        (t0n0 != 8'hFF) + (t0n1 != 8'hFF) + (t0n2 != 8'hFF) +
-        (t1n0 != 8'hFF) + (t1n1 != 8'hFF) + (t1n2 != 8'hFF) +
-        (t2n0 != 8'hFF) + (t2n1 != 8'hFF) + (t2n2 != 8'hFF) +
-        (t3n0 != 8'hFF) + (t3n1 != 8'hFF) + (t3n2 != 8'hFF);
-
-    // Escolhe entre todas as 4 trilhas para teste de botoes.
-    wire [3:0] spawn_select = 4'b0001 << lfsr_val[1:0];
-    wire       allow_spawn  = (active_note_count < MAX_ACTIVE_NOTES);
-
-    assign spawn_en = (spawn_tick && allow_spawn) ? (spawn_select & track_empty) : 4'b0000;
+    // Spawn determinístico: lê a ROM no frame atual e filtra por slot disponível
+    wire [3:0] chart_spawn = (game_active && frame_tick) ? chart_rom[frame_counter] : 4'b0000;
+    assign spawn_en = chart_spawn & track_has_slot;
 
     wire any_hit    = |hit_pulse;
     wire any_escape = |escape_pulse;
     wire any_bad    = |bad_press;
 
     // ----------------------------------------------------------------
-    // Score (16 bits): +100 acerto; bad_press nao penaliza score
-    // para evitar punicao excessiva em toques errados durante o treino.
-    // O combo ja pune o erro ao voltar para zero.
+    // Score (16 bits): +100 por acerto
     // ----------------------------------------------------------------
     reg [15:0] score_reg;
 
