@@ -118,7 +118,14 @@
     \centering
     \vspace*{2cm}
 
-    {\Huge\bfseries\textcolor{fpgablue}{Beat by Bit}}\\[0.5cm]
+    \begin{tikzpicture}
+        % Sombra escura (estilo 3D arcade)
+        \node[font=\fontsize{45}{50}\sffamily\bfseries, text=black!80, xshift=3pt, yshift=-3pt] {BEAT BY BIT};
+        % Texto principal em azul FPGA
+        \node[font=\fontsize{45}{50}\sffamily\bfseries, text=fpgablue] {BEAT BY BIT};
+        % Brilho (highlight neon) no topo/esquerda
+        \node[font=\fontsize{45}{50}\sffamily\bfseries, text=cyan!30!white, xshift=-1pt, yshift=1pt] {BEAT BY BIT};
+    \end{tikzpicture}\\[0.5cm]
     {\large Documentação Técnica — Semestre 2}\\[2cm]
 
     \begin{mdframed}[linecolor=fpgablue, linewidth=2pt, innertopmargin=12pt, innerbottommargin=12pt]
@@ -573,44 +580,46 @@ A FSM permaneceu com os mesmos 6 estados. A alteração foi a adição da saída
 \end{center}
 
 % ═══════════════════════════════════════════════════════════
-\section{Python — Renderer}
+\section{Integração Verilog-Python (Renderer)}
 % ═══════════════════════════════════════════════════════════
 
-O \texttt{interface.py} foi reescrito para ser um \emph{renderer} puro. Toda tomada de decisão de jogo foi removida.
+O script \texttt{interface.py} atua como o motor audiovisual (renderer) do sistema. O paradigma arquitetural adotado define que \textbf{toda a lógica de estado e regras de negócio residem na FPGA (Verilog)}, enquanto o \textbf{Python atua passivamente}, refletindo o estado do hardware na tela.
 
-\subsection{Fluxo de dados}
+\subsection{Dinâmica de Comunicação (Produtor-Consumidor)}
 
+A integração segue um modelo de produtor-consumidor em tempo real:
+\begin{itemize}
+    \item \textbf{Produtor (FPGA):} A cada borda de subida do \texttt{frame\_tick} ($\approx$ 60 vezes por segundo), o módulo \texttt{packet\_sender.v} faz um \emph{latch} (captura) de todas as variáveis críticas do jogo (score, combo, age das notas, estado da FSM). Esses dados são serializados e enviados via \texttt{uart\_tx} em um pacote binário de 20 bytes.
+    \item \textbf{Consumidor (Python):} O PC recebe os sinais através da porta USB (usando o padrão UART). O script Python utiliza a biblioteca \texttt{pyserial} dentro de uma \emph{thread} dedicada (\texttt{SerialReader}) para drenar o buffer do sistema operacional continuamente, evitando gargalos ou travamentos no loop de renderização gráfica do Pygame.
+\end{itemize}
+
+\subsection{Sincronização e Reconstrução do Estado}
+
+Como a comunicação UART assíncrona está sujeita a atrasos ou perda de bits caso o cabo sofra interferência, a integração garante a integridade dos dados através de \textbf{marcadores de fronteira}:
 \begin{enumerate}
-    \item A thread \texttt{SerialReader} lê bytes da porta serial em background e os acumula em um buffer.
-    \item A cada frame, o loop principal chama \texttt{\_process\_serial()}, que drena o buffer e procura pacotes válidos usando \texttt{find\_packet()}.
-    \item Ao encontrar um pacote com header \texttt{0x55} e footer \texttt{0xAA}, o \texttt{parse\_packet()} extrai os campos.
-    \item O estado da FPGA é atualizado e a tela é renderizada de acordo.
+    \item A função \texttt{find\_packet} varre o buffer serial em busca do byte de cabeçalho (\texttt{0x55}).
+    \item Ao encontrar, verifica se o byte na posição $+19$ é o terminador (\texttt{0xAA}).
+    \item Se a condição for satisfeita, o pacote é validado e a função \texttt{parse\_packet} extrai os 18 bytes intermediários para reconstruir a matriz de notas e as variáveis numéricas de HUD.
+    \item Caso o pacote esteja fragmentado, o Python descarta os bytes iniciais e busca o próximo alinhamento válido, garantindo ressincronização automática quase instantânea.
 \end{enumerate}
 
-\subsection{Parser do pacote}
-
-\begin{lstlisting}[style=python, caption={Função \texttt{parse\_packet} em \texttt{interface.py}.}]
+\begin{lstlisting}[style=python, caption={Trecho do Parser verificando a integridade do pacote UART.}]
 def parse_packet(data, offset):
     if data[offset] != 0x55 or data[offset + 19] != 0xAA:
-        return None
+        return None  # Pacote invalido ou incompleto
     state     = data[offset + 1] & 0x0F
-    countdown = data[offset + 2]
-    notes = []
-    for t in range(4):
-        track = [data[offset + 3 + t*3 + s] * NOTE_SPEED
-                 for s in range(3)
-                 if data[offset + 3 + t*3 + s] != 0xFF]
-        notes.append(track)
-    score  = (data[offset + 15] << 8) | data[offset + 16]
-    misses = data[offset + 17]
-    combo  = data[offset + 18]
-    return {'state': state, 'countdown': countdown, 'notes': notes,
-            'score': score, 'misses': misses, 'combo': combo}
+    # ... (extracao de notas e placar)
+    return {'state': state, 'notes': notes, 'score': score, ...}
 \end{lstlisting}
 
-\subsection{Sincronização de pacotes}
+\subsection{Mapeamento Visual e Sonoro Indireto}
 
-A função \texttt{find\_packet(buf)} varre o buffer em busca de um par \texttt{0x55 ... 0xAA} separados por exatamente 18 bytes. Isso garante ressincronização automática em caso de perda de bytes na UART.
+Sendo um \emph{renderer} passivo, o Python não calcula a física do jogo nem verifica se um botão foi apertado no momento certo. Ele infere os efeitos visuais de forma inteligente comparando as diferenças entre os pacotes recebidos:
+\begin{itemize}
+    \item \textbf{Animação de Notas:} A coordenada $Y$ exata das notas na tela não é calculada por fórmulas de movimento no Python, mas sim derivada diretamente da "idade" da nota (\texttt{age}) enviada pelo Verilog multiplicada por uma constante.
+    \item \textbf{Feedback Visual (Hits e Misses):} O Python guarda o estado das notas do frame anterior. Se ele percebe que uma nota desapareceu da lista (comparando os conjuntos \texttt{prev\_notes} e \texttt{curr\_notes}) e, simultaneamente, detecta que o contador de \texttt{score} ou \texttt{combo} enviado pela FPGA aumentou, ele sabe que o usuário acertou e desenha na tela a animação de acerto (partículas explodindo e luzes neon nos botões arcade). Se a nota sumiu abaixo da tela e os erros (\texttt{misses}) subiram, ele pisca um flash vermelho de erro nas bordas da trilha correspondente.
+    \item \textbf{Áudio e Interface:} O byte numérico de estado (\texttt{STATE\_IDLE}, \texttt{STATE\_PLAY}, \texttt{STATE\_SONG\_SELECT}, etc.) enviado pela máquina de estados da FPGA controla qual tela é exibida e dita os comandos do reprodutor de música (iniciando o áudio no Play, aplicando o \texttt{unpause} correto ao voltar de um Pause, ou parando completamente).
+\end{itemize}
 
 % ═══════════════════════════════════════════════════════════
 \section{Como Fazer Funcionar na Prática}

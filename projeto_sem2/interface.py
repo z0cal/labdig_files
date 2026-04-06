@@ -794,18 +794,39 @@ class Renderer:
         self._draw_idle_anim()
         self.screen.blit(self.scanline_surf, (0, 0))
 
-        # Titulo com glow pulsante
+        # Titulo 3D Arcade com glow pulsante e flutuacao
         ticks = pygame.time.get_ticks()
-        pulse = 0.5 + 0.5 * math.sin(ticks * 0.002)
-        glow_alpha = int(60 + 80 * pulse)
-        title = self.font(110).render('Beat by Bit', True, (220, 40, 40))
-        glow_s = pygame.Surface(title.get_size(), pygame.SRCALPHA)
-        glow_title = self.font(110).render('Beat by Bit', True, (255, 80, 80))
-        glow_s.blit(glow_title, (0, 0))
+        pulse = 0.5 + 0.5 * math.sin(ticks * 0.003)
+        glow_alpha = int(60 + 120 * pulse)
+        float_y = 6 * math.sin(ticks * 0.002)
+
+        text_str = 'BEAT BY BIT'
+        fnt = self.font(140)
+        
+        # Sombra profunda
+        shadow = fnt.render(text_str, True, (10, 10, 20))
+        # Corpo 3D (extrusao em camadas para dar profundidade)
+        body1 = fnt.render(text_str, True, (120, 20, 60))
+        body2 = fnt.render(text_str, True, (180, 30, 90))
+        body3 = fnt.render(text_str, True, (220, 50, 120))
+        # Rosto principal branco/azulado
+        main_txt = fnt.render(text_str, True, (240, 250, 255))
+        
+        # Glow neon no fundo
+        glow_txt = fnt.render(text_str, True, (0, 180, 255))
+        glow_s = pygame.Surface(glow_txt.get_size(), pygame.SRCALPHA)
+        glow_s.blit(glow_txt, (0, 0))
         glow_s.set_alpha(glow_alpha)
-        rect = title.get_rect(center=(SCREEN_W // 2, 200))
-        self.screen.blit(glow_s, (rect.x - 4, rect.y + 4))
-        self.screen.blit(title, rect)
+
+        base_rect = main_txt.get_rect(center=(SCREEN_W // 2, 190 + float_y))
+        
+        # Desenha as camadas de tras pra frente
+        self.screen.blit(shadow, (base_rect.x + 8, base_rect.y + 12))
+        self.screen.blit(glow_s, (base_rect.x, base_rect.y))
+        self.screen.blit(body1, (base_rect.x + 6, base_rect.y + 9))
+        self.screen.blit(body2, (base_rect.x + 4, base_rect.y + 6))
+        self.screen.blit(body3, (base_rect.x + 2, base_rect.y + 3))
+        self.screen.blit(main_txt, base_rect)
 
         if ticks % 1000 < 650:
             sub = self.font(50).render('Aperte START para jogar', True, (255, 220, 0))
