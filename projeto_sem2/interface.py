@@ -271,22 +271,28 @@ class Renderer:
             self.glow_surfs.append(s)
 
     def _build_btn_surfaces(self):
-        r    = NOTE_RADIUS + 4
-        size = r * 2 + 4
+        btn_radius = NOTE_RADIUS + 2
+        size = btn_radius * 2 + 16
+        center = size // 2
         self.btn_size = size
         self.btn_off = []
         self.btn_on  = []
-        pad = 4  # margem interna para o retangulo
         for color in TRACK_COLORS:
-            # OFF: borda pixelada semi-transparente
+            # OFF: Circulo com borda opaca e miolo escuro
             off = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.rect(off, (*color, 80), (pad, pad, size - pad * 2, size - pad * 2), 3)
+            pygame.draw.circle(off, (40, 40, 60, 200), (center, center), btn_radius + 6)
+            pygame.draw.circle(off, (*color, 100), (center, center), btn_radius + 2, 3)
+            pygame.draw.circle(off, (20, 20, 30, 200), (center, center), btn_radius - 1)
             self.btn_off.append(off)
-            # ON: glow externo + preenchido + borda branca
+            
+            # ON: Estilo arcade aceso (brilho + preenchido + reflexo plastico)
             on = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.rect(on, (*color, 200), (0, 0, size, size))
-            pygame.draw.rect(on, color, (pad, pad, size - pad * 2, size - pad * 2))
-            pygame.draw.rect(on, (255, 255, 255), (pad, pad, size - pad * 2, size - pad * 2), 2)
+            pygame.draw.circle(on, (*color, 100), (center, center), btn_radius + 8)
+            pygame.draw.circle(on, (*color, 200), (center, center), btn_radius + 4)
+            pygame.draw.circle(on, color, (center, center), btn_radius)
+            pygame.draw.circle(on, (255, 255, 255), (center, center), btn_radius, 2)
+            # Reflexo oval no topo para dar sensacao 3D/Plastico
+            pygame.draw.ellipse(on, (255, 255, 255, 120), (center - btn_radius//2, center - btn_radius + 4, btn_radius, btn_radius//2))
             self.btn_on.append(on)
 
     def _build_scanline_surf(self):
@@ -545,8 +551,7 @@ class Renderer:
             pygame.draw.line(self.screen, color,
                              (0, HIT_Y + offset), (SCREEN_W, HIT_Y + offset), 1)
 
-        r    = NOTE_RADIUS + 4
-        size = r * 2 + 4
+        size = self.btn_size
         for i, x in enumerate(TRACK_X):
             surf = self.btn_on[i] if (active_tracks and i in active_tracks) else self.btn_off[i]
             self.screen.blit(surf, (x - size // 2, HIT_Y - size // 2))
