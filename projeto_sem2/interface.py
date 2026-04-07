@@ -25,8 +25,15 @@ Conversao age -> Y: y = age * NOTE_SPEED  (NOTE_SPEED=4)
 
 import pygame
 
+# Tamanho do buffer de audio.
+# Maior buffer = menos crackling em maquinas lentas, mas mais latencia.
+# 16384 @ 44100Hz ≈ 371ms ≈ 22 frames a 60fps — compensado no chart (AUDIO_LATENCY_FRAMES).
+_AUDIO_BUFFER = 16384
+
+# pre_init DEVE ser chamado antes de pygame.init() para garantir as configuracoes
+# corretas do mixer desde o inicio (evita double-init e distorcao em algumas maquinas).
+pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=_AUDIO_BUFFER)
 pygame.init()
-pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
 
 import threading
 import queue
@@ -47,6 +54,9 @@ except ImportError:
 
 SCREEN_W, SCREEN_H = 1800, 1080
 FPS = 60
+# Latencia do buffer de audio em frames: compensa o atraso entre pygame.music.play()
+# e o som efetivamente sair pelos alto-falantes.
+AUDIO_LATENCY_FRAMES = round(_AUDIO_BUFFER / 44100 * FPS)  # ≈ 22 frames
 
 # ─── Fatores de escala (base = 800×600) ──────────────────────────────────────
 _BASE_W, _BASE_H = 800, 600
@@ -91,19 +101,40 @@ STATE_WIN = 4
 STATE_LOSE = 5
 STATE_SONG_SELECT = 6
 
-SONG_DURATION_MS = 73_800  # duracao total do chart de Concerning Hobbits
-ROM_DEPTH        = 9861  # int(164.35 * 60) — deve ser igual ao localparam no Verilog
+SONG_DURATION_MS = 63_860  # duracao total do chart de Concerning Hobbits (versao curta)
+ROM_DEPTH        = 3831   # int(63.86 * 60) — deve ser igual ao localparam no Verilog
 
 SONGS = [
     {
         "title": "Concerning Hobbits",
         "subtitle": "The Lord of the Rings",
         "author": "Howard Shore",
-        "audio": "assets/music/concerning_hobbits.wav",
+        "midi": "musica1_condado/condado_curta.mid",
+        "audio": "musica1_condado/Condado_curta.wav",
+        "duration": 63.86,
+        "hex": "condado_curta.hex",
         "available": True,
     },
-    {"title": "???", "subtitle": "Em breve...", "author": "", "available": False},
-    {"title": "???", "subtitle": "Em breve...", "author": "", "available": False},
+    {
+        "title": "Song of Storms",
+        "subtitle": "The Legend of Zelda",
+        "author": "",
+        "midi": "musica2_ocarina/Ocarina_curta.mid",
+        "audio": "musica2_ocarina/Ocarina_curta.wav",
+        "duration": 70.33,
+        "hex": "ocarina_curta.hex",
+        "available": True,
+    },
+    {
+        "title": "Power Rangers",
+        "subtitle": "Insane Mode",
+        "author": "",
+        "midi": "musica3_insanemode/power_rangers.mid",
+        "audio": "musica3_insanemode/Power_Rangers.wav",
+        "duration": 64.67,
+        "hex": "power_rangers.hex",
+        "available": True,
+    },
     {"title": "???", "subtitle": "Em breve...", "author": "", "available": False},
 ]
 
@@ -218,11 +249,9 @@ def find_packet(buf):
 
 # ─── Chart: gerado do MIDI real ───────────────────────────────────────────────
 
-_MIDI_PATH = (
-    "musica1_condado/HowardShore_-_ConcerningHobbits__Anonymous_20130720044852.mid"
-)
-_WAV_SRC_PATH = "musica1_condado/Condado8bit.wav"
-_WAV_DURATION = 164.35  # segundos
+_MIDI_PATH    = "musica1_condado/condado_curta.mid"
+_WAV_SRC_PATH = "musica1_condado/Condado_curta.wav"
+_WAV_DURATION = 63.86  # segundos
 
 # ─── Dificuldade ──────────────────────────────────────────────────────────────
 # Mude apenas esta linha: 'facil', 'medio' ou 'dificil'
@@ -230,73 +259,97 @@ DIFFICULTY = "facil"
 
 _DIFF_PRESETS = {
     #              min_lane  global  max_sim
-    "facil": (30, 18, 1),
-    "medio": (20, 10, 2),
+    "facil": (50, 18, 1),
+    "medio": (30, 10, 2),
     "dificil": (15, 5, 4),
 }
 _MIN_NOTE_SPACING, _GLOBAL_SPACING, _MAX_SIMULTANEOUS = _DIFF_PRESETS[DIFFICULTY]
 
 
-def _pitch_to_lane(p):
-    """Mapeia pitch MIDI para lane 0-3 por registro."""
-    if p <= 57:
-        return 0  # graves  (D)
-    if p <= 66:
-        return 1  # med-baixo (F)
-    if p <= 74:
-        return 2  # med-alto  (J)
-    return 3  # agudos  (K)
-
-
-def _midi_to_chart(save_hex=False):
+def _midi_to_chart(song_config=None, save_hex=False):
     """
     Le o MIDI e retorna lista de bitmasks por frame (60 fps).
-    Se save_hex=True, tambem grava concerning_hobbits.hex.
+    Se save_hex=True, tambem grava o arquivo .hex da musica.
+    song_config: entrada do array SONGS (com campos 'midi', 'duration', 'hex').
+                 Se None, usa os defaults globais (_MIDI_PATH, _WAV_DURATION).
+
+    Mapeamento de lanes: adaptativo por quartis do pitch do proprio MIDI,
+    garantindo distribuicao balanceada nas 4 lanes independente da musica.
     """
     import mido
 
-    mid = mido.MidiFile(_MIDI_PATH)
-    tpb = mid.ticks_per_beat
-    tempo = 500000
+    midi_path = song_config["midi"]     if song_config else _MIDI_PATH
+    duration  = song_config["duration"] if song_config else _WAV_DURATION
+    hex_name  = song_config["hex"]      if song_config else "condado_curta.hex"
+
+    mid = mido.MidiFile(midi_path)
     t_sec = 0.0
-    events = []
+    raw_events = []  # (time_sec, pitch)
 
-    for msg in mid.tracks[0]:
-        t_sec += mido.tick2second(msg.time, tpb, tempo)
-        if msg.type == "set_tempo":
-            tempo = msg.tempo
-        elif msg.type == "note_on" and msg.velocity > 0:
-            events.append((t_sec, _pitch_to_lane(msg.note)))
+    # Ao iterar sobre o MidiFile diretamente, mido mergeia todas as tracks
+    # e retorna msg.time em segundos (delta) — nao precisa de tick2second.
+    for msg in mid:
+        t_sec += msg.time
+        if msg.type == "note_on" and msg.velocity > 0:
+            raw_events.append((t_sec, msg.note))
 
-    total_frames = int(_WAV_DURATION * FPS)  # igual a ROM_DEPTH no Verilog (9861)
+    # Mapeamento adaptativo: divide o range de pitches em quartis para
+    # distribuir as notas igualmente entre as 4 lanes.
+    if raw_events:
+        pitches = sorted(p for _, p in raw_events)
+        n = len(pitches)
+        b0 = pitches[n // 4]      # limite superior da lane 0
+        b1 = pitches[n // 2]      # limite superior da lane 1
+        b2 = pitches[3 * n // 4]  # limite superior da lane 2
+        def _pitch_to_lane(p):
+            if p <= b0: return 0
+            if p <= b1: return 1
+            if p <= b2: return 2
+            return 3
+    else:
+        def _pitch_to_lane(p):
+            return 0
+
+    total_frames = int(duration * FPS)  # igual ao ROM_DEPTH correspondente no Verilog
+
+    # Agrupar eventos por frame: quando notas simultaneas colidem, escolhe o
+    # lane menos recentemente usado — garante distribuicao balanceada em todas as musicas.
+    # AUDIO_LATENCY_FRAMES compensa o atraso do buffer de audio: sem ele, as notas
+    # chegam na hit zone antes do som correspondente sair pelos alto-falantes.
+    from collections import defaultdict
+    frame_map = defaultdict(list)
+    for t, note in raw_events:
+        f = int(t * FPS) - int(HIT_AGE) + AUDIO_LATENCY_FRAMES
+        if 0 <= f < total_frames:
+            frame_map[f].append(_pitch_to_lane(note))
+
     rom = [0] * total_frames
-    last_frame = [-_MIN_NOTE_SPACING] * 4  # ultimo frame usado por trilha
-    last_any = -_GLOBAL_SPACING  # ultimo frame com qualquer nota
+    last_frame = [-_MIN_NOTE_SPACING] * 4  # ultimo frame aceito por trilha
 
-    for t, lane in events:
-        # Subtrai HIT_AGE para que a nota chegue na hit zone no momento certo da musica
-        f = int(t * FPS) - HIT_AGE
-        if f < 0 or f >= total_frames:
+    for f in sorted(frame_map.keys()):
+        # Candidatos: lanes presentes neste frame que respeitam o espacamento por trilha
+        seen = {}
+        for lane in frame_map[f]:
+            if lane not in seen:
+                seen[lane] = lane
+        candidates = [
+            lane for lane in seen
+            if f - last_frame[lane] >= _MIN_NOTE_SPACING
+        ]
+        if not candidates:
             continue
-        # Filtros de densidade: espaçamento por trilha, global e simultaneidade
-        if f - last_frame[lane] < _MIN_NOTE_SPACING:
-            continue
-        if f - last_any < _GLOBAL_SPACING:
-            continue
-        if bin(rom[f]).count("1") >= _MAX_SIMULTANEOUS:
-            continue
-        rom[f] |= 1 << lane
-        last_frame[lane] = f
-        last_any = f
+        # Ordenar por uso mais antigo primeiro (garante rotacao entre lanes)
+        candidates.sort(key=lambda l: last_frame[l])
+        for lane in candidates[:_MAX_SIMULTANEOUS]:
+            rom[f] |= 1 << lane
+            last_frame[lane] = f
 
     if save_hex:
-        with open("concerning_hobbits.hex", "w") as fh:
+        with open(hex_name, "w") as fh:
             for v in rom:
                 fh.write(f"{v:02X}\n")
         notes = sum(1 for v in rom if v)
-        print(
-            f"[chart] concerning_hobbits.hex gerado: {len(rom)} frames, {notes} notas"
-        )
+        print(f"[chart] {hex_name} gerado: {len(rom)} frames, {notes} notas")
 
     return rom
 
@@ -322,7 +375,13 @@ class SimulationEngine:
         self.score = 0
         self.misses = 0
         self.combo = 0
-        self._chart = _midi_to_chart(save_hex=True)  # gerado do MIDI real
+        self._selected_song = 0
+        # Pre-gera charts de todas as musicas disponíveis e grava os .hex no disco
+        self._charts = [
+            _midi_to_chart(s, save_hex=True)
+            for s in SONGS if s["available"]
+        ]
+        self._chart = self._charts[self._selected_song]
         self._rom_depth = len(self._chart)
 
     # ── API publica ──────────────────────────────────────────────────────────
@@ -370,6 +429,13 @@ class SimulationEngine:
             if start:
                 self.state = STATE_IDLE
             elif btn[0]:
+                self._selected_song = 0
+                self._start_countdown()
+            elif btn[1]:
+                self._selected_song = 1
+                self._start_countdown()
+            elif btn[2]:
+                self._selected_song = 2
                 self._start_countdown()
         elif self.state == STATE_COUNTDOWN:
             self._cd_frame += 1
@@ -391,6 +457,8 @@ class SimulationEngine:
 
     def _start_countdown(self):
         self._reset()
+        self._chart = self._charts[self._selected_song]
+        self._rom_depth = len(self._chart)
         self.state = STATE_COUNTDOWN
 
     def _reset(self):
@@ -470,6 +538,7 @@ class Renderer:
         self.fpga_misses        = 0
         self.fpga_combo         = 0
         self.fpga_frame_counter = 0
+        self._selected_song     = 0
 
         # Efeitos visuais tipados
         self._hit_effects = []  # burst de acerto
@@ -502,25 +571,12 @@ class Renderer:
 
     # ── Musica ────────────────────────────────────────────────────────────────
 
-    _MUSIC_PATH = _WAV_SRC_PATH  # musica1_condado/Condado8bit.wav (modo FPGA e sim)
-    _SIM_MUSIC_PATH = (
-        _WAV_SRC_PATH  # aponta direto para musica1_condado/Condado8bit.wav
-    )
-
     def _init_music(self):
-        """Carrega musica. Modo sim: usa WAV real de musica1_condado/ diretamente."""
+        """Carrega a musica da song selecionada."""
         self._music_ok = False
         self._music_paused = False
 
-        path = self._SIM_MUSIC_PATH if self._sim_mode else self._MUSIC_PATH
-
-        if not self._sim_mode and not os.path.exists(path):
-            print("[music] Gerando concerning_hobbits.wav por sintese...")
-            try:
-                self._generate_wav(path)
-            except Exception as e:
-                print(f"[music] Falha ao gerar musica: {e}")
-                return
+        path = SONGS[self._selected_song]["audio"]
 
         try:
             pygame.mixer.music.load(path)
@@ -798,6 +854,10 @@ class Renderer:
         self._prev_combo = self.fpga_combo
 
         pkt = self.sim.step(btn)
+        # Sincronizar musica selecionada e recarregar audio se necessario
+        if self.sim._selected_song != self._selected_song:
+            self._selected_song = self.sim._selected_song
+            self._init_music()
         self.fpga_state         = pkt["state"]
         self.fpga_countdown     = pkt["countdown"]
         self.fpga_notes         = pkt["notes"]
@@ -1057,7 +1117,8 @@ class Renderer:
 
         # Barra de progresso baseada no frame_counter da FPGA (ou sim)
         if self.fpga_state == STATE_PLAY:
-            ratio = min(1.0, self.fpga_frame_counter / max(1, ROM_DEPTH - 1))
+            _depth = len(self.sim._chart) if self._sim_mode else int(SONGS[self._selected_song]["duration"] * FPS)
+            ratio = min(1.0, self.fpga_frame_counter / max(1, _depth - 1))
             bw = SCREEN_W - _px(40)
             bh = max(4, _py(8))
             by = SCREEN_H - _py(14)
@@ -1218,9 +1279,9 @@ class Renderer:
 
         # Dica
         if self._sim_mode:
-            hint_text = "[SIM]  D = Concerning Hobbits   |   SPACE = Voltar"
+            hint_text = "[SIM]  D = Hobbit  |  F = Ocarina  |  J = Power Rangers  |  SPACE = Voltar"
         else:
-            hint_text = "Botao 0 = Concerning Hobbits  |  START = Voltar"
+            hint_text = "Btn0 = Hobbit  |  Btn1 = Ocarina  |  Btn2 = Power Rangers  |  START = Voltar"
         hint = self.font(26).render(hint_text, True, (65, 65, 105))
         self.screen.blit(
             hint, hint.get_rect(center=(SCREEN_W // 2, BOX_TOP + BOX_H + 28))
@@ -1238,7 +1299,7 @@ class Renderer:
             )
 
         # Nome da musica durante a contagem
-        sn = self.font(28).render("Concerning Hobbits", True, (180, 180, 220))
+        sn = self.font(28).render(SONGS[self._selected_song]["title"], True, (180, 180, 220))
         self.screen.blit(sn, sn.get_rect(center=(SCREEN_W // 2, SCREEN_H // 2 + _py(70))))
 
     def _draw_play(self, notes, score, misses, combo):

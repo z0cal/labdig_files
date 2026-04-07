@@ -8,17 +8,18 @@
  * Logica implementada:
  *   - Gerador de frame_tick (~60fps com clock de 50MHz)
  *   - Timer de countdown (3 segundos = 180 frames)
- *   - ROM de chart (concerning_hobbits.hex, 4428 frames ~ 73.8 s)
- *   - Contador de frames para indexar a ROM
+ *   - 3 ROMs de chart (condado_curta/ocarina_curta/power_rangers)
+ *   - Contador de frames para indexar a ROM (depth dinamico por musica)
  *   - 4x note_track (um por trilha)
  *   - Contadores de score, misses e combo
  *   - Debounce + deteccao de borda para os botoes
- *   - Saida song_ok_pulso para selecao de musica na UC
+ *   - Saida song_ok_pulso para selecao de musica na UC (btn0/1/2)
+ *   - Registrador song_id_reg para selecionar qual ROM usar
  *-----------------------------------------------------------------------
  * Clock assumido: 50 MHz
  *   frame_tick: M = 833_333 ciclos (= 50MHz / 60fps)
  *   countdown:  180 frames = 3 segundos
- *   ROM_DEPTH:  4428 frames = ~73.8 segundos
+ *   ROM depths: 3831 (Hobbits), 4219 (Ocarina), 3880 (Power Rangers)
  *   debounce:   9_000_000 ciclos (= 180ms)
  *-----------------------------------------------------------------------
  */
@@ -80,21 +81,31 @@ module fluxo_dados (
     localparam integer BTN_DEBOUNCE_CYCLES = 9_000_000;
     wire [3:0] btn_pulse;
 
-    // btn0 nao usa limpaR no reset: song_ok precisa ser detectado no estado SELECT,
-    // onde limpaR=1 (UC mantem limpaR alto em idle e select).
+    // btn0, btn1 e btn2 nao usam limpaR no reset: song_ok precisa ser detectado
+    // no estado SELECT, onde limpaR=1 (UC mantem limpaR alto em idle e select).
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_btn0 (.clock(clock), .reset(reset), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn1 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[1]), .pulso(btn_pulse[1]));
+        u_db_btn1 (.clock(clock), .reset(reset), .sinal(botoes_trilha[1]), .pulso(btn_pulse[1]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn2 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[2]), .pulso(btn_pulse[2]));
+        u_db_btn2 (.clock(clock), .reset(reset), .sinal(botoes_trilha[2]), .pulso(btn_pulse[2]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_btn3 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[3]), .pulso(btn_pulse[3]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_start (.clock(clock), .reset(reset), .sinal(start_raw), .pulso(start_pulso));
 
     assign jogada_feita  = |btn_pulse;
-    assign song_ok_pulso = btn_pulse[0];   // botao 0 = Concerning Hobbits
+    // Qualquer dos 3 botoes de selecao de musica dispara song_ok para a UC
+    assign song_ok_pulso = btn_pulse[0] | btn_pulse[1] | btn_pulse[2];
+
+    // Registra qual musica foi selecionada (0=Hobbits, 1=Ocarina, 2=Power Rangers)
+    reg [1:0] song_id_reg;
+    always @(posedge clock or posedge reset) begin
+        if (reset)             song_id_reg <= 2'd0;
+        else if (btn_pulse[0]) song_id_reg <= 2'd0;
+        else if (btn_pulse[1]) song_id_reg <= 2'd1;
+        else if (btn_pulse[2]) song_id_reg <= 2'd2;
+    end
 
     // ----------------------------------------------------------------
     // Frame tick: 1 pulso por frame (~60fps)
@@ -142,35 +153,48 @@ module fluxo_dados (
     assign countdown_sec = cd_sec_reg;
 
     // ----------------------------------------------------------------
-    // ROM do chart: concerning_hobbits.hex
-    //   9861 frames = int(164.353s * 60fps) — igual a duracao do WAV
+    // ROMs dos charts (uma por musica)
     //   bit[i] = 1 → spawnar nota na trilha i neste frame
+    //   Profundidades: int(duracao_segundos * 60fps)
     // ----------------------------------------------------------------
-    localparam integer ROM_DEPTH = 9861;
+    localparam integer ROM_DEPTH_0 = 3831;   // condado_curta:   int(63.86 * 60)
+    localparam integer ROM_DEPTH_1 = 4219;   // ocarina_curta:   int(70.33 * 60)
+    localparam integer ROM_DEPTH_2 = 3880;   // power_rangers:   int(64.67 * 60)
 
-    reg [7:0] chart_rom [0:ROM_DEPTH-1];
-    initial $readmemh("concerning_hobbits.hex", chart_rom);
+    reg [7:0] chart_rom0 [0:ROM_DEPTH_0-1];
+    reg [7:0] chart_rom1 [0:ROM_DEPTH_1-1];
+    reg [7:0] chart_rom2 [0:ROM_DEPTH_2-1];
+
+    initial $readmemh("condado_curta.hex",  chart_rom0);
+    initial $readmemh("ocarina_curta.hex",  chart_rom1);
+    initial $readmemh("power_rangers.hex",  chart_rom2);
+
+    // Profundidade dinamica baseada na musica selecionada
+    wire [13:0] current_rom_depth;
+    assign current_rom_depth = (song_id_reg == 2'd1) ? 14'd4219 :
+                               (song_id_reg == 2'd2) ? 14'd3880 :
+                                                       14'd3831;
 
     // ----------------------------------------------------------------
     // Contador de frames de jogo (indexa a ROM)
     //   Incrementa a cada frame_tick enquanto game_active = 1.
     //   Reseta junto com zera_timer (ao voltar para IDLE/WIN/LOSE).
-    //   Para em ROM_DEPTH-1 para evitar acesso fora da ROM.
+    //   Para em current_rom_depth-1 para evitar acesso fora da ROM.
     // ----------------------------------------------------------------
-    reg [13:0] frame_counter;   // 14 bits: alcanca ate 16383 > 9921
+    reg [13:0] frame_counter;   // 14 bits: alcanca ate 16383
 
     always @(posedge clock or posedge reset) begin
         if (reset) begin
             frame_counter <= 14'd0;
         end else if (zera_timer) begin
             frame_counter <= 14'd0;
-        end else if (frame_tick && game_active && frame_counter < ROM_DEPTH - 1) begin
+        end else if (frame_tick && game_active && frame_counter < current_rom_depth - 1) begin
             frame_counter <= frame_counter + 14'd1;
         end
     end
 
     // fim_tempo: dispara quando o ultimo frame do chart e atingido
-    assign fim_tempo = (frame_counter == ROM_DEPTH - 1) && frame_tick && game_active;
+    assign fim_tempo = (frame_counter == current_rom_depth - 1) && frame_tick && game_active;
 
     // ----------------------------------------------------------------
     // Note tracks (uma por trilha)
@@ -219,8 +243,18 @@ module fluxo_dados (
     assign track_has_slot[2] = (t2n0 == 8'hFF) || (t2n1 == 8'hFF) || (t2n2 == 8'hFF);
     assign track_has_slot[3] = (t3n0 == 8'hFF) || (t3n1 == 8'hFF) || (t3n2 == 8'hFF);
 
+    // Mux de ROM: seleciona dados do chart da musica ativa
+    reg [3:0] chart_spawn_r;
+    always @* begin
+        case (song_id_reg)
+            2'd1:    chart_spawn_r = chart_rom1[frame_counter];
+            2'd2:    chart_spawn_r = chart_rom2[frame_counter];
+            default: chart_spawn_r = chart_rom0[frame_counter];
+        endcase
+    end
+
     // Spawn determinístico: lê a ROM no frame atual e filtra por slot disponível
-    wire [3:0] chart_spawn = (game_active && frame_tick) ? chart_rom[frame_counter] : 4'b0000;
+    wire [3:0] chart_spawn = (game_active && frame_tick) ? chart_spawn_r : 4'b0000;
     assign spawn_en = chart_spawn & track_has_slot;
 
     wire any_hit    = |hit_pulse;
