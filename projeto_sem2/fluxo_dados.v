@@ -140,10 +140,10 @@ module fluxo_dados (
 
     // ----------------------------------------------------------------
     // ROM do chart: concerning_hobbits.hex
-    //   4428 entradas de 4 bits (uma por frame)
+    //   9921 entradas de 4 bits (uma por frame) — ~164.35s a 60fps
     //   bit[i] = 1 → spawnar nota na trilha i neste frame
     // ----------------------------------------------------------------
-    localparam integer ROM_DEPTH = 4428;
+    localparam integer ROM_DEPTH = 9921;
 
     reg [3:0] chart_rom [0:ROM_DEPTH-1];
     initial $readmemh("concerning_hobbits.hex", chart_rom);
@@ -154,13 +154,13 @@ module fluxo_dados (
     //   Reseta junto com zera_timer (ao voltar para IDLE/WIN/LOSE).
     //   Para em ROM_DEPTH-1 para evitar acesso fora da ROM.
     // ----------------------------------------------------------------
-    reg [12:0] frame_counter;   // 13 bits: alcanca ate 8191 > 4428
+    reg [13:0] frame_counter;   // 14 bits: alcanca ate 16383 > 9921
 
     always @(posedge clock or posedge reset) begin
         if (reset || zera_timer) begin
-            frame_counter <= 13'd0;
+            frame_counter <= 14'd0;
         end else if (frame_tick && game_active && frame_counter < ROM_DEPTH - 1) begin
-            frame_counter <= frame_counter + 13'd1;
+            frame_counter <= frame_counter + 14'd1;
         end
     end
 

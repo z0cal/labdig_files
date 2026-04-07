@@ -195,17 +195,215 @@ def find_packet(buf):
     return None, max(0, len(buf) - keep)
 
 
+# ─── Chart: gerado do MIDI real ───────────────────────────────────────────────
+
+_MIDI_PATH         = 'musica1_condado/HowardShore_-_ConcerningHobbits__Anonymous_20130720044852.mid'
+_WAV_SRC_PATH      = 'musica1_condado/Condado8bit.wav'
+_WAV_DURATION      = 164.35   # segundos
+_MIN_NOTE_SPACING  = 15       # frames minimos entre notas na mesma trilha (~250 ms)
+
+
+def _pitch_to_lane(p):
+    """Mapeia pitch MIDI para lane 0-3 por registro."""
+    if p <= 57: return 0   # graves  (D)
+    if p <= 66: return 1   # med-baixo (F)
+    if p <= 74: return 2   # med-alto  (J)
+    return 3               # agudos  (K)
+
+
+def _midi_to_chart(save_hex=False):
+    """
+    Le o MIDI e retorna lista de bitmasks por frame (60 fps).
+    Se save_hex=True, tambem grava concerning_hobbits.hex.
+    """
+    import mido
+    mid    = mido.MidiFile(_MIDI_PATH)
+    tpb    = mid.ticks_per_beat
+    tempo  = 500000
+    t_sec  = 0.0
+    events = []
+
+    for msg in mid.tracks[0]:
+        t_sec += mido.tick2second(msg.time, tpb, tempo)
+        if msg.type == 'set_tempo':
+            tempo = msg.tempo
+        elif msg.type == 'note_on' and msg.velocity > 0:
+            events.append((t_sec, _pitch_to_lane(msg.note)))
+
+    total_frames = int(_WAV_DURATION * FPS) + FPS
+    rom          = [0] * total_frames
+    last_frame   = [-_MIN_NOTE_SPACING] * 4
+
+    for t, lane in events:
+        f = int(t * FPS)
+        if f >= total_frames:
+            continue
+        if f - last_frame[lane] >= _MIN_NOTE_SPACING:
+            rom[f] |= (1 << lane)
+            last_frame[lane] = f
+
+    if save_hex:
+        with open('concerning_hobbits.hex', 'w') as fh:
+            for v in rom:
+                fh.write(f'{v:02X}\n')
+        notes = sum(1 for v in rom if v)
+        print(f'[chart] concerning_hobbits.hex gerado: {len(rom)} frames, {notes} notas')
+
+    return rom
+
+
+# ─── Simulacao (modo sem FPGA) ────────────────────────────────────────────────
+
+class SimulationEngine:
+    """Replica a FSM e a logica de notas do Verilog para teste sem FPGA."""
+
+    HIT_AGE   = 130   # age quando nota esta em HIT_Y (= HIT_Y / NOTE_SPEED)
+    HIT_WIN   = 11    # janela de acerto: ±11 frames
+    MISS_AGE  = 151   # nota escapa apos este age
+    CD_FRAMES = 180   # frames de countdown (3s a 60fps)
+    SLOTS     = 3     # slots de nota por trilha
+    EMPTY     = 0xFF
+
+    def __init__(self):
+        self.state         = STATE_IDLE
+        self._cd_frame     = 0
+        self._chart_frame  = 0
+        self._ages         = [[self.EMPTY] * self.SLOTS for _ in range(4)]
+        self.score         = 0
+        self.misses        = 0
+        self.combo         = 0
+        self._chart        = _midi_to_chart(save_hex=True)   # gerado do MIDI real
+        self._rom_depth    = len(self._chart)
+
+    # ── API publica ──────────────────────────────────────────────────────────
+
+    def step(self, btn):
+        """
+        Avanca um frame. btn = [track0, track1, track2, track3, start] (bool).
+        Retorna dict compativel com parse_packet().
+        """
+        self._fsm(btn)
+
+        if self.state == STATE_PLAY:
+            self._advance_ages()
+            self._check_escapes()
+            self._spawn_notes()
+            self._process_buttons(btn)
+            if self._chart_frame >= self._rom_depth and self._all_empty():
+                self.state = STATE_WIN
+
+        countdown_sec = max(0, 3 - self._cd_frame // 60) if self.state == STATE_COUNTDOWN else 0
+        notes = []
+        for track in self._ages:
+            notes.append([age * NOTE_SPEED for age in track if age != self.EMPTY])
+
+        return {
+            'state':     self.state,
+            'countdown': countdown_sec,
+            'notes':     notes,
+            'score':     self.score,
+            'misses':    self.misses,
+            'combo':     self.combo,
+        }
+
+    # ── FSM ──────────────────────────────────────────────────────────────────
+
+    def _fsm(self, btn):
+        start = btn[4]
+        if self.state == STATE_IDLE:
+            if start:
+                self.state = STATE_SONG_SELECT
+        elif self.state == STATE_SONG_SELECT:
+            if start:
+                self.state = STATE_IDLE
+            elif btn[0]:
+                self._start_countdown()
+        elif self.state == STATE_COUNTDOWN:
+            self._cd_frame += 1
+            if self._cd_frame >= self.CD_FRAMES:
+                self.state = STATE_PLAY
+        elif self.state == STATE_PLAY:
+            if start:
+                self.state = STATE_PAUSE
+        elif self.state == STATE_PAUSE:
+            if start:
+                self.state = STATE_PLAY
+        elif self.state in (STATE_WIN, STATE_LOSE):
+            if start:
+                self.state = STATE_IDLE
+                self._reset()
+
+    def _start_countdown(self):
+        self._reset()
+        self.state = STATE_COUNTDOWN
+
+    def _reset(self):
+        self._cd_frame    = 0
+        self._chart_frame = 0
+        self._ages        = [[self.EMPTY] * self.SLOTS for _ in range(4)]
+        self.score        = 0
+        self.misses       = 0
+        self.combo        = 0
+
+    # ── Logica de notas ──────────────────────────────────────────────────────
+
+    def _advance_ages(self):
+        for track in self._ages:
+            for i in range(self.SLOTS):
+                if track[i] != self.EMPTY:
+                    track[i] += 1
+
+    def _check_escapes(self):
+        for track in self._ages:
+            for i in range(self.SLOTS):
+                if track[i] != self.EMPTY and track[i] > self.MISS_AGE:
+                    track[i] = self.EMPTY
+                    self.misses += 1
+                    self.combo   = 0
+
+    def _spawn_notes(self):
+        if self._chart_frame < len(self._chart):
+            mask = self._chart[self._chart_frame]
+            for t in range(4):
+                if mask & (1 << t):
+                    for i in range(self.SLOTS):
+                        if self._ages[t][i] == self.EMPTY:
+                            self._ages[t][i] = 0
+                            break
+        self._chart_frame += 1
+
+    def _process_buttons(self, btn):
+        for t in range(4):
+            if not btn[t]:
+                continue
+            track = self._ages[t]
+            hit = False
+            for i in range(self.SLOTS):
+                if track[i] != self.EMPTY and abs(track[i] - self.HIT_AGE) <= self.HIT_WIN:
+                    track[i] = self.EMPTY
+                    self.score += 100
+                    self.combo += 1
+                    hit = True
+                    break
+            if not hit:
+                self.combo = 0
+
+    def _all_empty(self):
+        return all(age == self.EMPTY for track in self._ages for age in track)
+
+
 # ─── Renderer ─────────────────────────────────────────────────────────────────
 
 class Renderer:
 
-    def __init__(self, serial_port='/dev/ttyUSB0', baudrate=115200):
+    def __init__(self, serial_port='/dev/ttyUSB0', baudrate=115200, sim_mode=False):
+        self._sim_mode = sim_mode
         self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-        pygame.display.set_caption('Beat by Bit')
+        pygame.display.set_caption('Beat by Bit' + (' [SIM]' if sim_mode else ''))
         self.clock      = pygame.time.Clock()
         self._font_cache = {}
 
-        # Estado recebido da FPGA
+        # Estado recebido da FPGA (ou simulado)
         self.fpga_state    = STATE_IDLE
         self.fpga_countdown = 3
         self.fpga_notes    = [[], [], [], []]
@@ -224,8 +422,13 @@ class Renderer:
         self.scratch = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
 
         self._serial_buf = bytearray()
-        self.serial = SerialReader(port=serial_port, baudrate=baudrate)
-        self.serial.start()
+        if sim_mode:
+            self.sim          = SimulationEngine()
+            self.serial       = None
+            self._sim_song_ms = int(_WAV_DURATION * 1000)
+        else:
+            self.serial = SerialReader(port=serial_port, baudrate=baudrate)
+            self.serial.start()
 
         self._build_glow_surfaces()
         self._build_btn_surfaces()
@@ -239,129 +442,57 @@ class Renderer:
 
     # ── Musica ────────────────────────────────────────────────────────────────
 
-    _MUSIC_PATH = 'assets/music/concerning_hobbits.wav'
+    _MUSIC_PATH     = 'assets/music/concerning_hobbits.wav'
+    _SIM_MUSIC_PATH = _WAV_SRC_PATH   # aponta direto para musica1_condado/Condado8bit.wav
 
     def _init_music(self):
-        """Gera (se necessario) e carrega Concerning Hobbits."""
-        self._music_ok = False
-        if not os.path.exists(self._MUSIC_PATH):
+        """Carrega musica. Modo sim: usa WAV real de musica1_condado/ diretamente."""
+        self._music_ok     = False
+        self._music_paused = False
+
+        path = self._SIM_MUSIC_PATH if self._sim_mode else self._MUSIC_PATH
+
+        if not self._sim_mode and not os.path.exists(path):
             print('[music] Gerando concerning_hobbits.wav por sintese...')
             try:
-                self._generate_wav(self._MUSIC_PATH)
+                self._generate_wav(path)
             except Exception as e:
                 print(f'[music] Falha ao gerar musica: {e}')
                 return
+
         try:
-            pygame.mixer.music.load(self._MUSIC_PATH)
+            pygame.mixer.music.load(path)
             pygame.mixer.music.set_volume(0.70)
             self._music_ok = True
-            print(f'[music] Carregado: {self._MUSIC_PATH}')
+            print(f'[music] Carregado: {path}')
         except Exception as e:
             print(f'[music] Falha ao carregar musica: {e}')
 
     @staticmethod
     def _generate_wav(path):
-        """Sintetiza Concerning Hobbits e salva em WAV."""
-        import numpy as np, wave as _wave
-        SR   = 44100
-        beat = 0.6  # BPM=100
-        CH_SEQ = [
-            ('R',4),('R',4),
-            ('A4',1),('B4',1),('D5',1),('B4',1),
-            ('A4',1.5),('G4',0.5),('A4',1),('R',1),
-            ('D5',2),('A4',0.5),('G4',0.5),('F#4',1),
-            ('G4',2.5),('R',0.5),('A4',1),
-            ('A4',1),('B4',1),('D5',1),('B4',1),
-            ('A4',1.5),('G4',0.5),('F#4',2),
-            ('G4',1),('A4',1),('B4',2),('A4',4),
-            ('D5',1),('E5',1),('F#5',1),('D5',1),
-            ('E5',2),('C#5',2),
-            ('D5',1),('C#5',1),('B4',2),('A4',4),
-            ('D5',1),('A4',1),('G4',1),('F#4',1),
-            ('E4',1),('F#4',1),('G4',2),
-            ('A4',2),('B4',2),
-            ('D5',1),('C#5',1),('B4',1),('A4',1),
-            ('G4',2),('A4',2),
-            ('B4',1),('A4',1),('G4',2),
-            ('F#4',2),('E4',2),
-            ('D5',1),('D5',1),('E5',1),('F#5',1),('G5',4),
-            ('A4',1),('B4',1),('D5',1),('B4',1),
-            ('A4',1.5),('G4',0.5),('A4',2),
-            ('D5',1),('C#5',1),('B4',2),('A4',4),
-            ('D5',2),('G4',2),('D4',6),
-        ]
-        NF = {
-            'D3':146.83,'G3':196.00,'A3':220.00,'B3':246.94,
-            'D4':293.66,'E4':329.63,'F#4':369.99,'G4':392.00,
-            'A4':440.00,'B4':493.88,'C#5':554.37,'D5':587.33,
-            'E5':659.25,'F#5':739.99,'G5':783.99,
-        }
-        HARM = {
-            'A4':'F#4','B4':'G4','D5':'B4','G4':'E4','F#4':'D4',
-            'D4':'B3','E4':'C#5','C#5':'A4','E5':'C#5','F#5':'D5','G5':'E5',
-        }
-        total = sum(b for _,b in CH_SEQ)
-        N = int((total*beat+3.0)*SR)
-        buf = np.zeros(N,np.float32)
-        def tone(freq,n):
-            t=np.arange(n)/SR
-            return (np.sin(2*np.pi*freq*t)+0.50*np.sin(4*np.pi*freq*t)
-                    +0.20*np.sin(6*np.pi*freq*t)+0.08*np.sin(8*np.pi*freq*t))/1.78
-        def tri(freq,n):
-            t=np.arange(n)/SR
-            return 2*np.abs(2*(t*freq%1)-1)-1
-        def env(n,rel=0.25):
-            e=np.ones(n,np.float32); a=min(int(0.01*SR),n); r=min(int(rel*n),n)
-            if a: e[:a]=np.linspace(0,1,a)
-            if r: e[-r:]*=np.linspace(1,0,r)
-            return e
-        t=0.0
-        for note,beats in CH_SEQ:
-            n=int(beats*beat*SR); s=int(t*SR)
-            if note!='R' and note in NF:
-                nr=min(n,N-s)
-                if nr>0: buf[s:s+nr]+=tone(NF[note],nr)*env(nr)*0.55
-            t+=beats*beat
-        t=0.0
-        for note,beats in CH_SEQ:
-            n=int(beats*beat*SR); s=int(t*SR)
-            h=HARM.get(note)
-            if h and h in NF:
-                nr=min(n,N-s)
-                if nr>0: buf[s:s+nr]+=tone(NF[h],nr)*env(nr,0.30)*0.22
-            t+=beats*beat
-        BASS=[('D3',1),('R',1),('A3',1),('R',1)]
-        tb,bb,lim=0.0,0,int(total)+8
-        while bb<lim:
-            for bn,bb2 in BASS:
-                if bb>=lim: break
-                n=int(bb2*beat*SR); s=int(tb*SR)
-                if bn!='R' and bn in NF:
-                    nr=min(n,N-s)
-                    if nr>0: buf[s:s+nr]+=tri(NF[bn],nr)*env(nr,0.4)*0.20
-                tb+=bb2*beat; bb+=bb2
-        pk=np.max(np.abs(buf))
-        if pk>0: buf=buf/pk*0.85
-        pcm=(buf*32767).astype(np.int16)
-        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-        with _wave.open(path,'wb') as wf:
-            wf.setnchannels(1); wf.setsampwidth(2)
-            wf.setframerate(SR); wf.writeframes(pcm.tobytes())
+        """Fallback de sintese para modo FPGA (sem audio externo). Usa mesma sintese do modo sim."""
+        _score_to_wav(path)
 
     def _update_music(self, state):
-        """Controla reproducao com base no estado da FPGA."""
+        """Controla reproducao com base no estado do jogo."""
         if not self._music_ok:
             return
         playing = pygame.mixer.music.get_busy()
         if state == STATE_PLAY:
             if not playing:
-                pygame.mixer.music.play()   # inicia apenas em PLAY, sem loop
+                if self._music_paused:
+                    pygame.mixer.music.unpause()   # retoma de onde parou
+                    self._music_paused = False
+                else:
+                    pygame.mixer.music.play()      # inicia do zero
         elif state == STATE_PAUSE:
             if playing:
                 pygame.mixer.music.pause()
+                self._music_paused = True
         else:  # IDLE, SELECT, COUNTDOWN, WIN, LOSE
             if playing:
                 pygame.mixer.music.stop()
+            self._music_paused = False
 
     # ── Pre-renderizacao ──────────────────────────────────────────────────────
 
@@ -550,6 +681,31 @@ class Renderer:
                 elif y > HIT_Y + 60:
                     # Nota sumiu abaixo da hit zone → erro
                     self._spawn_miss_effect(i)
+
+    def _process_sim(self, events):
+        """Atualiza o estado a partir da simulacao Python (modo --sim)."""
+        btn = [False] * 5
+        key_map = {
+            pygame.K_d: 0, pygame.K_f: 1,
+            pygame.K_j: 2, pygame.K_k: 3,
+            pygame.K_SPACE: 4,
+        }
+        for ev in events:
+            if ev.type == pygame.KEYDOWN and ev.key in key_map:
+                btn[key_map[ev.key]] = True
+
+        self._prev_notes = [list(t) for t in self.fpga_notes]
+        self._prev_score = self.fpga_score
+        self._prev_combo = self.fpga_combo
+
+        pkt = self.sim.step(btn)
+        self.fpga_state     = pkt['state']
+        self.fpga_countdown = pkt['countdown']
+        self.fpga_notes     = pkt['notes']
+        self.fpga_score     = pkt['score']
+        self.fpga_misses    = pkt['misses']
+        self.fpga_combo     = pkt['combo']
+        self._detect_note_events()
 
     # ── Spawn de efeitos ──────────────────────────────────────────────────────
 
@@ -757,8 +913,12 @@ class Renderer:
                 self.screen.blit(shadow_surf, (base_rect.x + 2, base_rect.y + 2))
             self.screen.blit(combo_txt, base_rect)
 
-        status_color = (0, 255, 100) if self.serial.connected else (100, 100, 100)
-        status_label = "FPGA ON" if self.serial.connected else "FPGA OFF"
+        if self._sim_mode:
+            status_color = (255, 180, 0)
+            status_label = 'SIM'
+        else:
+            status_color = (0, 255, 100) if self.serial.connected else (100, 100, 100)
+            status_label = 'FPGA ON' if self.serial.connected else 'FPGA OFF'
         status_txt = self.font(20).render(status_label, True, status_color)
         self.screen.blit(status_txt, status_txt.get_rect(topright=(SCREEN_W - 20, 54)))
 
@@ -766,7 +926,8 @@ class Renderer:
         if self._music_ok and self.fpga_state == STATE_PLAY:
             pos_ms = pygame.mixer.music.get_pos()
             if pos_ms >= 0:
-                ratio = min(1.0, pos_ms / SONG_DURATION_MS)
+                song_ms = self._sim_song_ms if self._sim_mode else SONG_DURATION_MS
+                ratio = min(1.0, pos_ms / song_ms)
                 bw = SCREEN_W - 40
                 pygame.draw.rect(self.screen, (30, 30, 70),
                                  (20, SCREEN_H - 14, bw, 8), border_radius=4)
@@ -799,7 +960,11 @@ class Renderer:
             sub = self.font(50).render('Aperte START para jogar', True, (255, 220, 0))
             self.screen.blit(sub, sub.get_rect(center=(SCREEN_W // 2, 360)))
 
-        hint = self.font(30).render('FPGA: botoes 0-3 = trilhas  |  botao 4 = START', True, (80, 80, 120))
+        if self._sim_mode:
+            hint_text = '[SIM]  D / F / J / K = trilhas   |   SPACE = START'
+        else:
+            hint_text = 'FPGA: botoes 0-3 = trilhas  |  botao 4 = START'
+        hint = self.font(30).render(hint_text, True, (80, 80, 120))
         self.screen.blit(hint, hint.get_rect(center=(SCREEN_W // 2, 540)))
 
     def _wrap_text(self, text, size, max_w):
@@ -890,9 +1055,11 @@ class Renderer:
                 self.screen.blit(em, em.get_rect(center=(cx, BOX_TOP + BOX_H // 2)))
 
         # Dica
-        hint = self.font(26).render(
-            'Botao 0 = Concerning Hobbits  |  START = Voltar',
-            True, (65, 65, 105))
+        if self._sim_mode:
+            hint_text = '[SIM]  D = Concerning Hobbits   |   SPACE = Voltar'
+        else:
+            hint_text = 'Botao 0 = Concerning Hobbits  |  START = Voltar'
+        hint = self.font(26).render(hint_text, True, (65, 65, 105))
         self.screen.blit(hint, hint.get_rect(center=(SCREEN_W // 2, BOX_TOP + BOX_H + 28)))
 
     def _draw_countdown(self, sec):
@@ -929,7 +1096,8 @@ class Renderer:
         self.screen.blit(overlay, (0, 0))
         pause_txt = self.font(90).render('PAUSADO', True, (200, 200, 255))
         self.screen.blit(pause_txt, pause_txt.get_rect(center=(SCREEN_W // 2, 240)))
-        cont = self.font(44).render('Aperte START para continuar', True, (150, 150, 200))
+        cont_text = '[SIM] SPACE para continuar' if self._sim_mode else 'Aperte START para continuar'
+        cont = self.font(44).render(cont_text, True, (150, 150, 200))
         self.screen.blit(cont, cont.get_rect(center=(SCREEN_W // 2, 360)))
         self._draw_hud(self.fpga_score, self.fpga_misses, self.fpga_combo)
 
@@ -957,13 +1125,18 @@ class Renderer:
 
     def run(self):
         while True:
-            for event in pygame.event.get():
+            events = pygame.event.get()
+            for event in events:
                 if event.type == pygame.QUIT:
-                    self.serial.stop()
+                    if self.serial:
+                        self.serial.stop()
                     pygame.quit()
                     exit()
 
-            self._process_serial()
+            if self._sim_mode:
+                self._process_sim(events)
+            else:
+                self._process_serial()
 
             s = self.fpga_state
             self._update_music(s)
@@ -1000,6 +1173,8 @@ if __name__ == '__main__':
                         help='Porta serial da FPGA (padrao: /dev/ttyUSB0)')
     parser.add_argument('--baud', type=int, default=115200,
                         help='Baudrate UART (padrao: 115200)')
+    parser.add_argument('--sim', action='store_true',
+                        help='Modo simulacao: teclado (D/F/J/K=trilhas, SPACE=START), sem FPGA')
     args = parser.parse_args()
 
-    Renderer(serial_port=args.port, baudrate=args.baud).run()
+    Renderer(serial_port=args.port, baudrate=args.baud, sim_mode=args.sim).run()
