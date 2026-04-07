@@ -63,8 +63,9 @@ module fluxo_dados (
     output wire [7:0]  misses,
     output wire [7:0]  combo,
 
-    // Frame tick exposto para o packet_sender no top-level
-    output wire        frame_tick_out
+    // Frame tick e contador exposto para o packet_sender no top-level
+    output wire        frame_tick_out,
+    output wire [13:0] frame_counter_out
 );
 
     // ----------------------------------------------------------------
@@ -79,8 +80,10 @@ module fluxo_dados (
     localparam integer BTN_DEBOUNCE_CYCLES = 9_000_000;
     wire [3:0] btn_pulse;
 
+    // btn0 nao usa limpaR no reset: song_ok precisa ser detectado no estado SELECT,
+    // onde limpaR=1 (UC mantem limpaR alto em idle e select).
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn0 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
+        u_db_btn0 (.clock(clock), .reset(reset), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_btn1 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[1]), .pulso(btn_pulse[1]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
@@ -140,12 +143,12 @@ module fluxo_dados (
 
     // ----------------------------------------------------------------
     // ROM do chart: concerning_hobbits.hex
-    //   9921 entradas de 4 bits (uma por frame) — ~164.35s a 60fps
+    //   9861 frames = int(164.353s * 60fps) — igual a duracao do WAV
     //   bit[i] = 1 → spawnar nota na trilha i neste frame
     // ----------------------------------------------------------------
-    localparam integer ROM_DEPTH = 9921;
+    localparam integer ROM_DEPTH = 9861;
 
-    reg [3:0] chart_rom [0:ROM_DEPTH-1];
+    reg [7:0] chart_rom [0:ROM_DEPTH-1];
     initial $readmemh("concerning_hobbits.hex", chart_rom);
 
     // ----------------------------------------------------------------
@@ -157,7 +160,9 @@ module fluxo_dados (
     reg [13:0] frame_counter;   // 14 bits: alcanca ate 16383 > 9921
 
     always @(posedge clock or posedge reset) begin
-        if (reset || zera_timer) begin
+        if (reset) begin
+            frame_counter <= 14'd0;
+        end else if (zera_timer) begin
             frame_counter <= 14'd0;
         end else if (frame_tick && game_active && frame_counter < ROM_DEPTH - 1) begin
             frame_counter <= frame_counter + 14'd1;
@@ -275,7 +280,8 @@ module fluxo_dados (
     end
 
     assign combo          = combo_reg;
-    assign frame_tick_out = frame_tick;
+    assign frame_tick_out    = frame_tick;
+    assign frame_counter_out = frame_counter;
 
     // ----------------------------------------------------------------
     // Registrador de jogada para debug (HEX1 no display)
