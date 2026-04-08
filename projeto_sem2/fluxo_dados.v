@@ -66,7 +66,10 @@ module fluxo_dados (
 
     // Frame tick e contador exposto para o packet_sender no top-level
     output wire        frame_tick_out,
-    output wire [13:0] frame_counter_out
+    output wire [13:0] frame_counter_out,
+
+    // ID da musica selecionada (0=Hobbits, 1=Ocarina, 2=Power Rangers)
+    output wire [1:0]  song_id_out
 );
 
     // ----------------------------------------------------------------
@@ -98,13 +101,17 @@ module fluxo_dados (
     // Qualquer dos 3 botoes de selecao de musica dispara song_ok para a UC
     assign song_ok_pulso = btn_pulse[0] | btn_pulse[1] | btn_pulse[2];
 
-    // Registra qual musica foi selecionada (0=Hobbits, 1=Ocarina, 2=Power Rangers)
+    // Registra qual musica foi selecionada (0=Hobbits, 1=Ocarina, 2=Power Rangers).
+    // Guardado por limpaR=1 (estados idle/select): evita que apertar trilhas
+    // durante o jogo altere a ROM ativa e quebre o chart.
     reg [1:0] song_id_reg;
     always @(posedge clock or posedge reset) begin
-        if (reset)             song_id_reg <= 2'd0;
-        else if (btn_pulse[0]) song_id_reg <= 2'd0;
-        else if (btn_pulse[1]) song_id_reg <= 2'd1;
-        else if (btn_pulse[2]) song_id_reg <= 2'd2;
+        if (reset)                    song_id_reg <= 2'd0;
+        else if (limpaR) begin
+            if      (btn_pulse[0])    song_id_reg <= 2'd0;
+            else if (btn_pulse[1])    song_id_reg <= 2'd1;
+            else if (btn_pulse[2])    song_id_reg <= 2'd2;
+        end
     end
 
     // ----------------------------------------------------------------
@@ -142,12 +149,15 @@ module fluxo_dados (
 
     assign fim_contagem = s_fim_contagem;
 
-    // Countdown em segundos (3,2,1,0) para exibicao no Python
+    // Countdown em segundos (3,2,1,0) para exibicao no Python.
+    // u_countdown conta de 0 a 179 (M=180); fim dispara em Q=179.
+    // Mostra 3 nos frames 0-59, 2 nos frames 60-119, 1 nos frames 120-178,
+    // e 0 no frame 179 (ultimo frame antes de transitar para PLAY).
     reg [7:0] cd_sec_reg;
     always @* begin
         if      (cd_frame_q < 8'd60)  cd_sec_reg = 8'd3;
         else if (cd_frame_q < 8'd120) cd_sec_reg = 8'd2;
-        else if (cd_frame_q < 8'd180) cd_sec_reg = 8'd1;
+        else if (cd_frame_q < 8'd179) cd_sec_reg = 8'd1;
         else                          cd_sec_reg = 8'd0;
     end
     assign countdown_sec = cd_sec_reg;
@@ -155,21 +165,23 @@ module fluxo_dados (
     // ----------------------------------------------------------------
     // ROMs dos charts (uma por musica)
     //   bit[i] = 1 → spawnar nota na trilha i neste frame
-    //   Profundidades: int(duracao_segundos * 60fps)
+    //   Profundidades declaradas como potencia de 2 para que o Quartus
+    //   infira block RAM sem mismatch de tamanho no MIF.
+    //   Os enderecos alem do chart real contem 0 (nenhum spawn).
     // ----------------------------------------------------------------
-    localparam integer ROM_DEPTH_0 = 3831;   // condado_curta:   int(63.86 * 60)
-    localparam integer ROM_DEPTH_1 = 4219;   // ocarina_curta:   int(70.33 * 60)
-    localparam integer ROM_DEPTH_2 = 3880;   // power_rangers:   int(64.67 * 60)
+    localparam integer ROM_DEPTH_0 = 4096;   // condado_curta:   3831 frames, padded to 2^12
+    localparam integer ROM_DEPTH_1 = 8192;   // ocarina_curta:   4219 frames, padded to 2^13
+    localparam integer ROM_DEPTH_2 = 4096;   // power_rangers:   3880 frames, padded to 2^12
 
-    reg [7:0] chart_rom0 [0:ROM_DEPTH_0-1];
-    reg [7:0] chart_rom1 [0:ROM_DEPTH_1-1];
-    reg [7:0] chart_rom2 [0:ROM_DEPTH_2-1];
+    reg [3:0] chart_rom0 [0:ROM_DEPTH_0-1];
+    reg [3:0] chart_rom1 [0:ROM_DEPTH_1-1];
+    reg [3:0] chart_rom2 [0:ROM_DEPTH_2-1];
 
     initial $readmemh("condado_curta.hex",  chart_rom0);
     initial $readmemh("ocarina_curta.hex",  chart_rom1);
     initial $readmemh("power_rangers.hex",  chart_rom2);
 
-    // Profundidade dinamica baseada na musica selecionada
+    // Profundidade real de cada chart (para fim_tempo e teto do frame_counter)
     wire [13:0] current_rom_depth;
     assign current_rom_depth = (song_id_reg == 2'd1) ? 14'd4219 :
                                (song_id_reg == 2'd2) ? 14'd3880 :
@@ -243,13 +255,15 @@ module fluxo_dados (
     assign track_has_slot[2] = (t2n0 == 8'hFF) || (t2n1 == 8'hFF) || (t2n2 == 8'hFF);
     assign track_has_slot[3] = (t3n0 == 8'hFF) || (t3n1 == 8'hFF) || (t3n2 == 8'hFF);
 
-    // Mux de ROM: seleciona dados do chart da musica ativa
+    // Mux de ROM: leitura sincrona para que o Quartus infira ROM (sem porta de escrita).
+    // Como frame_tick ocorre apenas 1x a cada 833333 ciclos, o registrador
+    // converge para ROM[frame_counter] muitos ciclos antes do proximo tick.
     reg [3:0] chart_spawn_r;
-    always @* begin
+    always @(posedge clock) begin
         case (song_id_reg)
-            2'd1:    chart_spawn_r = chart_rom1[frame_counter];
-            2'd2:    chart_spawn_r = chart_rom2[frame_counter];
-            default: chart_spawn_r = chart_rom0[frame_counter];
+            2'd1:    chart_spawn_r <= chart_rom1[frame_counter];
+            2'd2:    chart_spawn_r <= chart_rom2[frame_counter];
+            default: chart_spawn_r <= chart_rom0[frame_counter];
         endcase
     end
 
@@ -279,7 +293,7 @@ module fluxo_dados (
     assign score = score_reg;
 
     // ----------------------------------------------------------------
-    // Misses (8 bits): incrementa quando nota escapa
+    // Misses (8 bits): incrementa quando nota escapa OU tecla errada
     // ----------------------------------------------------------------
     reg [7:0] miss_reg;
 
@@ -288,13 +302,13 @@ module fluxo_dados (
             miss_reg <= 8'd0;
         end else if (limpaR) begin
             miss_reg <= 8'd0;
-        end else if (any_escape && game_active) begin
+        end else if ((any_escape || any_bad) && game_active) begin
             miss_reg <= miss_reg + 8'd1;
         end
     end
 
     assign misses = miss_reg;
-    assign perdeu = (miss_reg >= 8'd10);
+    assign perdeu = 1'b0;  // sem limite de erros
 
     // ----------------------------------------------------------------
     // Combo (8 bits): incrementa em acertos, zera em erros
@@ -313,9 +327,10 @@ module fluxo_dados (
         end
     end
 
-    assign combo          = combo_reg;
+    assign combo             = combo_reg;
     assign frame_tick_out    = frame_tick;
     assign frame_counter_out = frame_counter;
+    assign song_id_out       = song_id_reg;
 
     // ----------------------------------------------------------------
     // Registrador de jogada para debug (HEX1 no display)

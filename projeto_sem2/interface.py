@@ -28,7 +28,7 @@ import pygame
 # Tamanho do buffer de audio.
 # Maior buffer = menos crackling em maquinas lentas, mas mais latencia.
 # 16384 @ 44100Hz ≈ 371ms ≈ 22 frames a 60fps — compensado no chart (AUDIO_LATENCY_FRAMES).
-_AUDIO_BUFFER = 16384
+_AUDIO_BUFFER = 4096
 
 # pre_init DEVE ser chamado antes de pygame.init() para garantir as configuracoes
 # corretas do mixer desde o inicio (evita double-init e distorcao em algumas maquinas).
@@ -60,21 +60,30 @@ AUDIO_LATENCY_FRAMES = round(_AUDIO_BUFFER / 44100 * FPS)  # ≈ 22 frames
 
 # ─── Fatores de escala (base = 800×600) ──────────────────────────────────────
 _BASE_W, _BASE_H = 800, 600
-SX  = SCREEN_W / _BASE_W   # escala horizontal
-SY  = SCREEN_H / _BASE_H   # escala vertical
-SS  = min(SX, SY)           # escala uniforme (elementos quadrados)
+SX = SCREEN_W / _BASE_W  # escala horizontal
+SY = SCREEN_H / _BASE_H  # escala vertical
+SS = min(SX, SY)  # escala uniforme (elementos quadrados)
 
-def _px(v): return int(v * SX)   # escala um valor em X
-def _py(v): return int(v * SY)   # escala um valor em Y
-def _ps(v): return int(v * SS)   # escala uniforme
 
-NOTE_SPEED  = 4   * SY              # escala com SY para manter HIT_AGE constante
-HIT_Y       = _py(520)
-HIT_AGE     = HIT_Y // NOTE_SPEED   # = 130 independente da resolucao
+def _px(v):
+    return int(v * SX)  # escala um valor em X
+
+
+def _py(v):
+    return int(v * SY)  # escala um valor em Y
+
+
+def _ps(v):
+    return int(v * SS)  # escala uniforme
+
+
+NOTE_SPEED = 4 * SY  # escala com SY para manter HIT_AGE constante
+HIT_Y = _py(520)
+HIT_AGE = HIT_Y // NOTE_SPEED  # = 130 independente da resolucao
 NOTE_RADIUS = _ps(22)
-GLOW_SIZE   = _ps(120)
+GLOW_SIZE = _ps(120)
 GLOW_CENTER = GLOW_SIZE // 2
-TRACK_W     = _px(80)
+TRACK_W = _px(80)
 
 TRACK_X = [_px(x) for x in [175, 300, 500, 625]]
 TRACK_LABELS = ["D", "F", "J", "K"]
@@ -102,7 +111,7 @@ STATE_LOSE = 5
 STATE_SONG_SELECT = 6
 
 SONG_DURATION_MS = 63_860  # duracao total do chart de Concerning Hobbits (versao curta)
-ROM_DEPTH        = 3831   # int(63.86 * 60) — deve ser igual ao localparam no Verilog
+ROM_DEPTH = 3831  # int(63.86 * 60) — deve ser igual ao localparam no Verilog
 
 SONGS = [
     {
@@ -217,19 +226,21 @@ def parse_packet(data, offset):
             if age != EMPTY_SLOT:
                 track_notes.append(age * NOTE_SPEED)
         notes.append(track_notes)
-    score         = (data[offset + 15] << 8) | data[offset + 16]
-    misses        = data[offset + 17]
-    combo         = data[offset + 18]
+    score = (data[offset + 15] << 8) | data[offset + 16]
+    misses = data[offset + 17]
+    combo = data[offset + 18]
     frame_counter = ((data[offset + 19] & 0x3F) << 8) | data[offset + 20]
+    song_id = (data[offset + 19] >> 6) & 0x03
 
     return {
-        "state":         state,
-        "countdown":     countdown,
-        "notes":         notes,
-        "score":         score,
-        "misses":        misses,
-        "combo":         combo,
+        "state": state,
+        "countdown": countdown,
+        "notes": notes,
+        "score": score,
+        "misses": misses,
+        "combo": combo,
         "frame_counter": frame_counter,
+        "song_id": song_id,
     }
 
 
@@ -249,7 +260,7 @@ def find_packet(buf):
 
 # ─── Chart: gerado do MIDI real ───────────────────────────────────────────────
 
-_MIDI_PATH    = "musica1_condado/condado_curta.mid"
+_MIDI_PATH = "musica1_condado/condado_curta.mid"
 _WAV_SRC_PATH = "musica1_condado/Condado_curta.wav"
 _WAV_DURATION = 63.86  # segundos
 
@@ -278,9 +289,9 @@ def _midi_to_chart(song_config=None, save_hex=False):
     """
     import mido
 
-    midi_path = song_config["midi"]     if song_config else _MIDI_PATH
-    duration  = song_config["duration"] if song_config else _WAV_DURATION
-    hex_name  = song_config["hex"]      if song_config else "condado_curta.hex"
+    midi_path = song_config["midi"] if song_config else _MIDI_PATH
+    duration = song_config["duration"] if song_config else _WAV_DURATION
+    hex_name = song_config["hex"] if song_config else "condado_curta.hex"
 
     mid = mido.MidiFile(midi_path)
     t_sec = 0.0
@@ -298,15 +309,20 @@ def _midi_to_chart(song_config=None, save_hex=False):
     if raw_events:
         pitches = sorted(p for _, p in raw_events)
         n = len(pitches)
-        b0 = pitches[n // 4]      # limite superior da lane 0
-        b1 = pitches[n // 2]      # limite superior da lane 1
+        b0 = pitches[n // 4]  # limite superior da lane 0
+        b1 = pitches[n // 2]  # limite superior da lane 1
         b2 = pitches[3 * n // 4]  # limite superior da lane 2
+
         def _pitch_to_lane(p):
-            if p <= b0: return 0
-            if p <= b1: return 1
-            if p <= b2: return 2
+            if p <= b0:
+                return 0
+            if p <= b1:
+                return 1
+            if p <= b2:
+                return 2
             return 3
     else:
+
         def _pitch_to_lane(p):
             return 0
 
@@ -317,6 +333,7 @@ def _midi_to_chart(song_config=None, save_hex=False):
     # AUDIO_LATENCY_FRAMES compensa o atraso do buffer de audio: sem ele, as notas
     # chegam na hit zone antes do som correspondente sair pelos alto-falantes.
     from collections import defaultdict
+
     frame_map = defaultdict(list)
     for t, note in raw_events:
         f = int(t * FPS) - int(HIT_AGE) + AUDIO_LATENCY_FRAMES
@@ -333,8 +350,7 @@ def _midi_to_chart(song_config=None, save_hex=False):
             if lane not in seen:
                 seen[lane] = lane
         candidates = [
-            lane for lane in seen
-            if f - last_frame[lane] >= _MIN_NOTE_SPACING
+            lane for lane in seen if f - last_frame[lane] >= _MIN_NOTE_SPACING
         ]
         if not candidates:
             continue
@@ -378,8 +394,7 @@ class SimulationEngine:
         self._selected_song = 0
         # Pre-gera charts de todas as musicas disponíveis e grava os .hex no disco
         self._charts = [
-            _midi_to_chart(s, save_hex=True)
-            for s in SONGS if s["available"]
+            _midi_to_chart(s, save_hex=True) for s in SONGS if s["available"]
         ]
         self._chart = self._charts[self._selected_song]
         self._rom_depth = len(self._chart)
@@ -409,13 +424,14 @@ class SimulationEngine:
             notes.append([age * NOTE_SPEED for age in track if age != self.EMPTY])
 
         return {
-            "state":         self.state,
-            "countdown":     countdown_sec,
-            "notes":         notes,
-            "score":         self.score,
-            "misses":        self.misses,
-            "combo":         self.combo,
+            "state": self.state,
+            "countdown": countdown_sec,
+            "notes": notes,
+            "score": self.score,
+            "misses": self.misses,
+            "combo": self.combo,
             "frame_counter": self._chart_frame,
+            "song_id": self._selected_song,
         }
 
     # ── FSM ──────────────────────────────────────────────────────────────────
@@ -513,6 +529,7 @@ class SimulationEngine:
                     hit = True
                     break
             if not hit:
+                self.misses += 1  # tecla errada tambem conta como erro
                 self.combo = 0
 
     def _all_empty(self):
@@ -531,14 +548,15 @@ class Renderer:
         self._font_cache = {}
 
         # Estado recebido da FPGA (ou simulado)
-        self.fpga_state         = STATE_IDLE
-        self.fpga_countdown     = 3
-        self.fpga_notes         = [[], [], [], []]
-        self.fpga_score         = 0
-        self.fpga_misses        = 0
-        self.fpga_combo         = 0
+        self.fpga_state = STATE_IDLE
+        self.fpga_countdown = 3
+        self.fpga_notes = [[], [], [], []]
+        self.fpga_score = 0
+        self.fpga_misses = 0
+        self.fpga_combo = 0
         self.fpga_frame_counter = 0
-        self._selected_song     = 0
+        self.fpga_song_id = 0
+        self._selected_song = 0
 
         # Efeitos visuais tipados
         self._hit_effects = []  # burst de acerto
@@ -809,13 +827,18 @@ class Renderer:
             self._prev_notes = [list(t) for t in self.fpga_notes]
             self._prev_score = self.fpga_score
             self._prev_combo = self.fpga_combo
-            self.fpga_state         = pkt["state"]
-            self.fpga_countdown     = pkt["countdown"]
-            self.fpga_notes         = pkt["notes"]
-            self.fpga_score         = pkt["score"]
-            self.fpga_misses        = pkt["misses"]
-            self.fpga_combo         = pkt["combo"]
+            self.fpga_state = pkt["state"]
+            self.fpga_countdown = pkt["countdown"]
+            self.fpga_notes = pkt["notes"]
+            self.fpga_score = pkt["score"]
+            self.fpga_misses = pkt["misses"]
+            self.fpga_combo = pkt["combo"]
             self.fpga_frame_counter = pkt["frame_counter"]
+            new_song_id = pkt.get("song_id", 0)
+            if new_song_id != self.fpga_song_id:
+                self.fpga_song_id = new_song_id
+                self._selected_song = new_song_id
+                self._init_music()
             self._detect_note_events()
 
     def _detect_note_events(self):
@@ -858,12 +881,12 @@ class Renderer:
         if self.sim._selected_song != self._selected_song:
             self._selected_song = self.sim._selected_song
             self._init_music()
-        self.fpga_state         = pkt["state"]
-        self.fpga_countdown     = pkt["countdown"]
-        self.fpga_notes         = pkt["notes"]
-        self.fpga_score         = pkt["score"]
-        self.fpga_misses        = pkt["misses"]
-        self.fpga_combo         = pkt["combo"]
+        self.fpga_state = pkt["state"]
+        self.fpga_countdown = pkt["countdown"]
+        self.fpga_notes = pkt["notes"]
+        self.fpga_score = pkt["score"]
+        self.fpga_misses = pkt["misses"]
+        self.fpga_combo = pkt["combo"]
         self.fpga_frame_counter = pkt["frame_counter"]
         self._detect_note_events()
 
@@ -1064,9 +1087,13 @@ class Renderer:
             self.scratch.fill((0, 0, 0, 0))
             c = (200, 0, 0, a)
             pygame.draw.rect(self.scratch, c, (0, 0, _px(60), SCREEN_H))
-            pygame.draw.rect(self.scratch, c, (SCREEN_W - _px(60), 0, _px(60), SCREEN_H))
+            pygame.draw.rect(
+                self.scratch, c, (SCREEN_W - _px(60), 0, _px(60), SCREEN_H)
+            )
             pygame.draw.rect(self.scratch, c, (0, 0, SCREEN_W, _py(40)))
-            pygame.draw.rect(self.scratch, c, (0, SCREEN_H - _py(60), SCREEN_W, _py(60)))
+            pygame.draw.rect(
+                self.scratch, c, (0, SCREEN_H - _py(60), SCREEN_W, _py(60))
+            )
             self.screen.blit(self.scratch, (0, 0))
 
     def _draw_hud(self, score, misses, combo):
@@ -1100,7 +1127,9 @@ class Renderer:
                 wobble = 0
 
             combo_txt = self.font(size).render(f"COMBO x{combo}", True, color)
-            base_rect = combo_txt.get_rect(topright=(SCREEN_W - _px(20) + wobble, _py(16)))
+            base_rect = combo_txt.get_rect(
+                topright=(SCREEN_W - _px(20) + wobble, _py(16))
+            )
             if shadow:
                 shadow_surf = self.font(size).render(f"COMBO x{combo}", True, shadow)
                 self.screen.blit(shadow_surf, (base_rect.x + 2, base_rect.y + 2))
@@ -1113,22 +1142,32 @@ class Renderer:
             status_color = (0, 255, 100) if self.serial.connected else (100, 100, 100)
             status_label = "FPGA ON" if self.serial.connected else "FPGA OFF"
         status_txt = self.font(20).render(status_label, True, status_color)
-        self.screen.blit(status_txt, status_txt.get_rect(topright=(SCREEN_W - _px(20), _py(54))))
+        self.screen.blit(
+            status_txt, status_txt.get_rect(topright=(SCREEN_W - _px(20), _py(54)))
+        )
 
         # Barra de progresso baseada no frame_counter da FPGA (ou sim)
         if self.fpga_state == STATE_PLAY:
-            _depth = len(self.sim._chart) if self._sim_mode else int(SONGS[self._selected_song]["duration"] * FPS)
+            _depth = (
+                len(self.sim._chart)
+                if self._sim_mode
+                else int(SONGS[self._selected_song]["duration"] * FPS)
+            )
             ratio = min(1.0, self.fpga_frame_counter / max(1, _depth - 1))
             bw = SCREEN_W - _px(40)
             bh = max(4, _py(8))
             by = SCREEN_H - _py(14)
             pygame.draw.rect(
-                self.screen, (30, 30, 70),
-                (_px(20), by, bw, bh), border_radius=4,
+                self.screen,
+                (30, 30, 70),
+                (_px(20), by, bw, bh),
+                border_radius=4,
             )
             pygame.draw.rect(
-                self.screen, (100, 120, 255),
-                (_px(20), by, int(bw * ratio), bh), border_radius=4,
+                self.screen,
+                (100, 120, 255),
+                (_px(20), by, int(bw * ratio), bh),
+                border_radius=4,
             )
 
     # ── Telas ─────────────────────────────────────────────────────────────────
@@ -1299,8 +1338,12 @@ class Renderer:
             )
 
         # Nome da musica durante a contagem
-        sn = self.font(28).render(SONGS[self._selected_song]["title"], True, (180, 180, 220))
-        self.screen.blit(sn, sn.get_rect(center=(SCREEN_W // 2, SCREEN_H // 2 + _py(70))))
+        sn = self.font(28).render(
+            SONGS[self._selected_song]["title"], True, (180, 180, 220)
+        )
+        self.screen.blit(
+            sn, sn.get_rect(center=(SCREEN_W // 2, SCREEN_H // 2 + _py(70)))
+        )
 
     def _draw_play(self, notes, score, misses, combo):
         self.screen.fill(BG_COLOR)
@@ -1322,7 +1365,9 @@ class Renderer:
         overlay.fill((0, 0, 0, 140))
         self.screen.blit(overlay, (0, 0))
         pause_txt = self.font(90).render("PAUSADO", True, (200, 200, 255))
-        self.screen.blit(pause_txt, pause_txt.get_rect(center=(SCREEN_W // 2, _py(240))))
+        self.screen.blit(
+            pause_txt, pause_txt.get_rect(center=(SCREEN_W // 2, _py(240)))
+        )
         if self._sim_mode:
             line1, line2 = "SPACE: continuar", "ESC: menu inicial"
         else:
@@ -1345,7 +1390,9 @@ class Renderer:
         self.screen.blit(msg_txt, msg_txt.get_rect(center=(SCREEN_W // 2, _py(200))))
 
         score_txt = self.font(60).render(f"Score: {score:06d}", True, (255, 255, 180))
-        self.screen.blit(score_txt, score_txt.get_rect(center=(SCREEN_W // 2, _py(320))))
+        self.screen.blit(
+            score_txt, score_txt.get_rect(center=(SCREEN_W // 2, _py(320)))
+        )
 
         miss_txt = self.font(40).render(f"Erros: {misses}", True, (200, 180, 180))
         self.screen.blit(miss_txt, miss_txt.get_rect(center=(SCREEN_W // 2, _py(390))))
@@ -1354,7 +1401,9 @@ class Renderer:
             restart = self.font(44).render(
                 "Aperte START para jogar novamente", True, (200, 200, 200)
             )
-            self.screen.blit(restart, restart.get_rect(center=(SCREEN_W // 2, _py(490))))
+            self.screen.blit(
+                restart, restart.get_rect(center=(SCREEN_W // 2, _py(490)))
+            )
 
     # ── Loop principal ────────────────────────────────────────────────────────
 

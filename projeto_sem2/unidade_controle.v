@@ -69,7 +69,8 @@ module unidade_controle (
             play:      Eprox = perdeu    ? end_lose :
                                fim_tempo ? end_win  :
                                start     ? pause    : play;
-            pause:     Eprox = start ? play : pause;
+            pause:     Eprox = song_ok ? idle :
+                               start   ? play  : pause;
             end_win:   Eprox = start ? idle : end_win;
             end_lose:  Eprox = start ? idle : end_lose;
             default:   Eprox = idle;

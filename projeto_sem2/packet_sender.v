@@ -2,10 +2,10 @@
  * Arquivo   : packet_sender.v
  * Projeto   : Beat by Bit - Semestre 2
  *-----------------------------------------------------------------------
- * Descricao : Monta e envia um pacote de 20 bytes via UART a cada
+ * Descricao : Monta e envia um pacote de 22 bytes via UART a cada
  *             frame_tick. Aguarda o uart_tx ficar pronto entre bytes.
  *
- * Formato do pacote (20 bytes):
+ * Formato do pacote (22 bytes):
  *   [0]    0x55          marcador de inicio
  *   [1]    game_state    0=IDLE 1=COUNTDOWN 2=PLAY 3=PAUSE 4=WIN 5=LOSE
  *   [2]    countdown_sec 3,2,1,0
@@ -19,7 +19,9 @@
  *  [16]    score[7:0]
  *  [17]    misses
  *  [18]    combo
- *  [19]    0xAA          marcador de fim
+ *  [19]    {2'b00, frame_counter[13:8]}  (6 bits altos)
+ *  [20]    frame_counter[7:0]            (8 bits baixos)
+ *  [21]    0xAA          marcador de fim
  *-----------------------------------------------------------------------
  */
 
@@ -42,6 +44,12 @@ module packet_sender (
     input  wire [15:0] score,
     input  wire [7:0]  misses,
     input  wire [7:0]  combo,
+
+    // Contador de frames (para barra de progresso no Python)
+    input  wire [13:0] frame_counter,
+
+    // ID da musica selecionada (bits 7:6 do byte 19)
+    input  wire [1:0]  song_id,
 
     // Saida serial
     output wire        uart_tx_out
@@ -68,10 +76,10 @@ module packet_sender (
     localparam DONE   = 2'd3;  // pacote completo, volta a WAIT
 
     reg [1:0]  state;
-    reg [4:0]  byte_idx;  // 0-19
+    reg [4:0]  byte_idx;  // 0-21
 
     // Buffer do pacote (latchado no frame_tick para consistencia)
-    reg [7:0] pkt [0:19];
+    reg [7:0] pkt [0:21];
 
     always @(posedge clock or posedge reset) begin
         if (reset) begin
@@ -97,7 +105,9 @@ module packet_sender (
                         pkt[16] <= score[7:0];
                         pkt[17] <= misses;
                         pkt[18] <= combo;
-                        pkt[19] <= 8'hAA;
+                        pkt[19] <= {song_id[1:0], frame_counter[13:8]};
+                        pkt[20] <= frame_counter[7:0];
+                        pkt[21] <= 8'hAA;
                         byte_idx <= 0;
                         state    <= LOAD;
                     end
@@ -114,7 +124,7 @@ module packet_sender (
                 SEND: begin
                     // Aguarda uart_tx comecar a transmitir (tx_ready cai)
                     if (!tx_ready) begin
-                        if (byte_idx == 19) begin
+                        if (byte_idx == 21) begin
                             state <= DONE;
                         end else begin
                             byte_idx <= byte_idx + 5'd1;
