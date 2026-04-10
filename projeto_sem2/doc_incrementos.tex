@@ -1,0 +1,784 @@
+% =========================================================================
+%  Beat by Bit — Documentação de Incrementos (Semestre 2)
+%  Comparação entre labdig_files e labdig_files_midiAudio
+% =========================================================================
+\documentclass[12pt, a4paper]{article}
+
+% --- Pacotes ---------------------------------------------------------------
+\usepackage{fontspec}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{mdframed}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amssymb}
+% lmodern substituido por fontspec
+
+\usetikzlibrary{automata, positioning, arrows.meta, shapes.geometric, fit, backgrounds}
+
+\geometry{
+    top=2.5cm, bottom=2.5cm,
+    left=2.5cm, right=2.5cm,
+    headheight=15pt
+}
+
+% --- Cores -----------------------------------------------------------------
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{220,220,220}
+\definecolor{vgreen}{RGB}{40,140,40}
+\definecolor{vblue}{RGB}{30,80,180}
+\definecolor{vred}{RGB}{180,40,40}
+\definecolor{vorange}{RGB}{200,100,0}
+\definecolor{highlight}{RGB}{255,248,220}
+\definecolor{highlightborder}{RGB}{220,180,0}
+\definecolor{newcolor}{RGB}{0,120,0}
+\definecolor{oldcolor}{RGB}{180,0,0}
+\definecolor{sectioncolor}{RGB}{20,60,120}
+
+% --- Estilo de código Verilog ----------------------------------------------
+\lstdefinelanguage{Verilog}{
+    keywords={module, endmodule, input, output, wire, reg, always, assign,
+              begin, end, if, else, case, endcase, posedge, negedge,
+              localparam, parameter, initial, default, or},
+    keywordstyle=\color{vblue}\bfseries,
+    comment=[l]{//},
+    commentstyle=\color{vgreen}\itshape,
+    morestring=[b]",
+    stringstyle=\color{vred},
+    sensitive=true
+}
+
+\lstset{
+    language=Verilog,
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=6pt,
+    xleftmargin=1.5em,
+    framexleftmargin=1.5em,
+    captionpos=b
+}
+
+% --- Cabeçalho/Rodapé ------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{Beat by Bit — Documentação de Incrementos}}
+\fancyhead[R]{\small\textit{Laboratório de Digitais}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Formatação de seções --------------------------------------------------
+\titleformat{\section}{\large\bfseries\color{sectioncolor}}{\thesection.}{0.6em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{sectioncolor}}{\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection.}{0.5em}{}
+
+% --- Ambientes personalizados ----------------------------------------------
+\newmdenv[
+    backgroundcolor=highlight,
+    linecolor=highlightborder,
+    linewidth=1pt,
+    innerleftmargin=8pt,
+    innerrightmargin=8pt,
+    innertopmargin=6pt,
+    innerbottommargin=6pt,
+    skipabove=6pt,
+    skipbelow=6pt
+]{destaque}
+
+\newcommand{\novo}[1]{\textcolor{newcolor}{\textbf{[NOVO]}} #1}
+\newcommand{\alterado}[1]{\textcolor{vorange}{\textbf{[ALT]}} #1}
+\newcommand{\antes}[1]{\textcolor{oldcolor}{\texttt{#1}}}
+\newcommand{\depois}[1]{\textcolor{newcolor}{\texttt{#1}}}
+\newcommand{\vfile}[1]{\texttt{\textbf{#1}}}
+\newcommand{\vsig}[1]{\texttt{#1}}
+
+% ==========================================================================
+\begin{document}
+
+% --- Página de título ------------------------------------------------------
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Huge\bfseries\color{sectioncolor} Beat by Bit}\\[0.5em]
+    {\large Jogo de Ritmo em FPGA — Placa DE0-CV}\\[2em]
+
+    \rule{\linewidth}{1pt}\\[0.8em]
+    {\LARGE\bfseries Documentação de Incrementos}\\[0.4em]
+    {\large Semestre 2 — Revisão de Código}\\[0.8em]
+    \rule{\linewidth}{1pt}
+
+    \vspace{2em}
+
+    \begin{tabular}{ll}
+        \textbf{Versão base:}      & \texttt{labdig\_files/projeto\_sem2} \\[0.3em]
+        \textbf{Versão atual:}     & \texttt{labdig\_files\_midiAudio/projeto\_sem2} \\[0.3em]
+        \textbf{Clock do sistema:} & 50\,MHz (Cyclone\,V) \\[0.3em]
+        \textbf{Taxa de quadros:}  & 60\,fps \\[0.3em]
+        \textbf{Baud UART:}        & 115\,200\,bps \\
+    \end{tabular}
+
+    \vspace{3em}
+
+    \begin{destaque}
+    \centering
+    \textbf{Resumo das mudanças principais}\\[0.5em]
+    \begin{tabular}{ll}
+        ROM do chart: & 4\,428 $\to$ 9\,861 entradas ($\approx$73\,s $\to$ $\approx$164\,s) \\
+        Frame counter: & 13\,bits $\to$ 14\,bits \\
+        Largura da ROM: & 4\,bits $\to$ 8\,bits por entrada \\
+        Pacote UART: & 20 bytes $\to$ 22 bytes \\
+        FSM PAUSE: & nova transição \texttt{PAUSE $\to$ IDLE} via \texttt{song\_ok} \\
+        Debounce btn0: & reset desacoplado de \texttt{limpaR} \\
+    \end{tabular}
+    \end{destaque}
+
+    \vfill
+    {\small Laboratório de Dispositivos Digitais --- 2025/2026}
+\end{titlepage}
+
+% --- Sumário ---------------------------------------------------------------
+\tableofcontents
+\newpage
+
+% ==========================================================================
+\section{Visão Geral do Projeto}
+% ==========================================================================
+
+O \textbf{Beat by Bit} é um jogo de ritmo implementado inteiramente em hardware
+descritivo Verilog, sintetizado para a FPGA Cyclone\,V da placa Altera DE0-CV.
+A lógica do jogo — geração de quadros, leitura do chart, detecção de acertos e
+erros, contagem de placar — reside nos módulos RTL. Uma aplicação Python em
+PC recebe o estado do jogo quadro a quadro via UART e realiza toda a
+renderização gráfica e reprodução de áudio.
+
+\subsection{Estrutura modular}
+
+A hierarquia de módulos é apresentada na Tabela~\ref{tab:hierarquia}.
+
+\begin{table}[h!]
+\centering
+\caption{Hierarquia de módulos do projeto}
+\label{tab:hierarquia}
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+\textbf{Módulo} & \textbf{Arquivo} & \textbf{Função} \\
+\midrule
+\texttt{beat\_by\_bit\_de0\_cv} & wrapper board & Mapeia pinos físicos da DE0-CV \\
+\texttt{proyecto}               & topo lógico   & Interliga todos os submódulos \\
+\texttt{fluxo\_dados}           & FD            & Toda a lógica de jogo \\
+\texttt{unidade\_controle}      & UC / FSM      & Máquina de estados do jogo \\
+\texttt{packet\_sender}         & PS            & Serialização UART por quadro \\
+\texttt{note\_track}            & NT (×4)       & Gerência de notas por trilha \\
+\texttt{uart\_tx}               & TX            & Transmissor UART 8N1 \\
+\texttt{debounce\_pulse}        & DB            & Debounce com saída em pulso \\
+\texttt{contador\_m}            & CM            & Contador paramétrico com fim \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ==========================================================================
+\section{Módulo \texttt{fluxo\_dados.v} — Expansão da ROM e Telemetria}
+% ==========================================================================
+
+O módulo \vfile{fluxo\_dados.v} é o núcleo do jogo. Ele concentra o gerador
+de quadros, a ROM de chart, o contador de frames, os quatro \texttt{note\_track}
+e os contadores de placar. Esta versão recebe duas alterações estruturais
+significativas: a expansão da memória de chart e a exposição do frame counter
+para telemetria.
+
+% --------------------------------------------------------------------------
+\subsection{Expansão da ROM de chart}
+
+\subsubsection{Profundidade da ROM}
+
+A constante \vsig{ROM\_DEPTH} foi aumentada de \antes{4428} para \depois{9861}
+entradas. Cada entrada corresponde a um quadro de jogo a 60\,fps, portanto:
+
+\begin{equation}
+    t_{\max} = \frac{9861}{60} \approx 164{,}4\,\text{s}
+    \qquad \text{(anteriormente } \frac{4428}{60} \approx 73{,}8\,\text{s)}
+\end{equation}
+
+Isso permite que o chart cubra a duração integral do arquivo WAV
+\texttt{concerning\_hobbits.wav} sem truncamento.
+
+\begin{lstlisting}[caption={Parâmetro ROM\_DEPTH — antes e depois}]
+// Versao base
+localparam integer ROM_DEPTH = 4428;
+
+// Versao atual
+localparam integer ROM_DEPTH = 9861;
+\end{lstlisting}
+
+\subsubsection{Largura das entradas}
+
+Simultaneamente, a largura dos registros da ROM foi ampliada de 4 para 8 bits:
+
+\begin{lstlisting}[caption={Tipo do array da ROM}]
+// Versao base
+reg [3:0] chart_rom [0:ROM_DEPTH-1];
+
+// Versao atual
+reg [7:0] chart_rom [0:ROM_DEPTH-1];
+\end{lstlisting}
+
+Os bits \texttt{[3:0]} continuam codificando o sinal de spawn para cada uma das
+quatro trilhas. Os bits \texttt{[7:4]} estão reservados para extensões futuras
+(ex.: notas com intensidade, notas longas).
+
+% --------------------------------------------------------------------------
+\subsection{Expansão do frame counter}
+
+Com \vsig{ROM\_DEPTH} = 9\,861, o contador de frames precisa representar valores
+até 9\,860, o que exige no mínimo $\lceil \log_2 9861 \rceil = 14$ bits
+($2^{13} = 8192 < 9861 \leq 16383 = 2^{14}$). O registrador foi ampliado
+de \antes{13} para \depois{14} bits:
+
+\begin{lstlisting}[caption={Declaração do frame\_counter}]
+// Versao base
+reg [12:0] frame_counter;   // max 8191
+
+// Versao atual
+reg [13:0] frame_counter;   // max 16383 > 9861
+\end{lstlisting}
+
+A lógica de incremento e o teste de fim de chart (\vsig{fim\_tempo}) permanecem
+funcionalmente idênticos; apenas os literais de inicialização foram atualizados
+para o novo tamanho:
+
+\begin{lstlisting}[caption={Reset e incremento do frame\_counter}]
+// Versao base — reset assíncrono e síncrono agrupados no mesmo bloco
+always @(posedge clock or posedge reset) begin
+    if (reset || zera_timer) begin
+        frame_counter <= 13'd0;
+    end else if (frame_tick && game_active && frame_counter < ROM_DEPTH - 1) begin
+        frame_counter <= frame_counter + 13'd1;
+    end
+end
+
+// Versao atual — reset síncrono separado; tamanho 14 bits
+always @(posedge clock or posedge reset) begin
+    if (reset) begin
+        frame_counter <= 14'd0;
+    end else if (zera_timer) begin
+        frame_counter <= 14'd0;
+    end else if (frame_tick && game_active && frame_counter < ROM_DEPTH - 1) begin
+        frame_counter <= frame_counter + 14'd1;
+    end
+end
+\end{lstlisting}
+
+\begin{destaque}
+\textbf{Nota sobre o reset:} na versão base, \texttt{reset} e \texttt{zera\_timer}
+compartilhavam o mesmo branch do \texttt{if}. Na versão atual eles foram separados
+em branches distintos, o que é equivalente funcionalmente mas gera um código de
+prioridade mais explícito e facilita a síntese correta.
+\end{destaque}
+
+% --------------------------------------------------------------------------
+\subsection{Nova porta de saída: \texttt{frame\_counter\_out}}
+
+Para permitir que o módulo de topo repasse a posição do chart ao
+\texttt{packet\_sender}, foi adicionada uma porta de saída de 14 bits:
+
+\begin{lstlisting}[caption={Nova porta de saída em fluxo\_dados}]
+// Versao base — apenas frame_tick_out
+output wire        frame_tick_out
+
+// Versao atual — frame_tick_out + frame_counter_out
+output wire        frame_tick_out,
+output wire [13:0] frame_counter_out
+\end{lstlisting}
+
+A atribuição é trivial:
+
+\begin{lstlisting}
+assign frame_tick_out    = frame_tick;
+assign frame_counter_out = frame_counter;   // linha adicionada
+\end{lstlisting}
+
+% --------------------------------------------------------------------------
+\subsection{Correção no debounce do botão 0}
+
+O debounce do botão 0 (\vsig{song\_ok\_pulso}) foi desacoplado do sinal
+\vsig{limpaR} no pino de reset do submódulo \texttt{debounce\_pulse}:
+
+\begin{lstlisting}[caption={Reset do debounce — botão 0}]
+// Versao base
+debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
+    u_db_btn0 (.clock(clock), .reset(reset | limpaR), ...);
+
+// Versao atual
+debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
+    u_db_btn0 (.clock(clock), .reset(reset), ...);
+\end{lstlisting}
+
+\subsubsection{Motivação}
+
+A UC mantém \vsig{limpaR} em nível alto nos estados \texttt{idle} e
+\texttt{select}. Na versão base, isso mantinha o debounce do botão 0
+continuamente resetado enquanto o jogo estava em \texttt{select}, tornando
+impossível detectar o pressionamento de seleção de música nesse estado.
+Ao remover \vsig{limpaR} da condição de reset, o debounce opera normalmente
+durante todo o ciclo — o que é seguro porque \vsig{song\_ok\_pulso} só é
+interpretado pela UC nos estados \texttt{select} e \texttt{pause}.
+
+% ==========================================================================
+\section{Módulo \texttt{unidade\_controle.v} — Nova Transição no PAUSE}
+% ==========================================================================
+
+A Unidade de Controle (UC) implementa a FSM principal do jogo em Verilog
+combinacional + registrador de estado. A versão atual introduz uma nova
+transição de saída do estado \texttt{pause}.
+
+% --------------------------------------------------------------------------
+\subsection{Descrição dos estados}
+
+\begin{table}[h!]
+\centering
+\caption{Estados da FSM}
+\label{tab:estados}
+\begin{tabular}{clp{8cm}}
+\toprule
+\textbf{Código} & \textbf{Estado} & \textbf{Descrição} \\
+\midrule
+\texttt{0000} & \texttt{idle}      & Tela inicial; contadores e placar limpos \\
+\texttt{0001} & \texttt{countdown} & Contagem regressiva de 3 segundos \\
+\texttt{0010} & \texttt{play}      & Jogo ativo; \texttt{game\_active} = 1 \\
+\texttt{0011} & \texttt{pause}     & Jogo pausado \\
+\texttt{0100} & \texttt{end\_win}  & Vitória (chart concluído sem 10 erros) \\
+\texttt{0101} & \texttt{end\_lose} & Derrota (10 erros acumulados) \\
+\texttt{0110} & \texttt{select}    & Seleção de música \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% --------------------------------------------------------------------------
+\subsection{Nova transição: \texttt{PAUSE} $\to$ \texttt{IDLE}}
+
+Na versão base, o único caminho de saída do estado \texttt{pause} era retornar
+ao \texttt{play} via \vsig{start}. Na versão atual, foi adicionada uma
+transição que retorna ao \texttt{idle} quando \vsig{song\_ok} (botão 0) é
+pressionado:
+
+\begin{lstlisting}[caption={Lógica de próximo estado — estado pause}]
+// Versao base
+pause: Eprox = start ? play : pause;
+
+// Versao atual
+pause: Eprox = song_ok ? idle :
+               start   ? play  : pause;
+\end{lstlisting}
+
+\subsubsection{Diagrama de estados atualizado}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+    ->, >=Stealth,
+    node distance=2.2cm and 3.2cm,
+    state/.style={circle, draw, minimum size=1.5cm, font=\small\bfseries,
+                  fill=white, draw=sectioncolor, line width=1pt, align=center},
+    every label/.style={font=\scriptsize}
+]
+
+% Nós
+\node[state] (idle)      {idle};
+\node[state, right=of idle] (select)    {select};
+\node[state, right=of select] (countdown) {count\\down};
+\node[state, right=of countdown] (play) {play};
+\node[state, below=of play]  (pause)    {pause};
+\node[state, below=of countdown] (lose) {end\\lose};
+\node[state, below=of select] (win)     {end\\win};
+
+% Transições normais
+\draw (idle)      edge[bend left=10]  node[above,font=\scriptsize]{\textit{start}} (select);
+\draw (select)    edge[bend left=10]  node[above,font=\scriptsize]{\textit{song\_ok}} (countdown);
+\draw (select)    edge[bend left=15]  node[below,font=\scriptsize]{\textit{start}} (idle);
+\draw (countdown) edge[bend left=10]  node[above,font=\scriptsize]{\textit{fim\_contagem}} (play);
+\draw (play)      edge[bend left=10]  node[right,font=\scriptsize]{\textit{start}} (pause);
+\draw (pause)     edge[bend left=10]  node[left,font=\scriptsize]{\textit{start}} (play);
+\draw (play)      edge[bend left=5]   node[left,font=\scriptsize]{\textit{perdeu}} (lose);
+\draw (play)      edge[bend left=15]  node[above,font=\scriptsize]{\textit{fim\_tempo}} (win);
+\draw (win)       edge[bend left=10]  node[left,font=\scriptsize]{\textit{start}} (idle);
+\draw (lose)      edge[bend left=15]  node[below,font=\scriptsize]{\textit{start}} (idle);
+
+% Nova transição destacada
+\draw[color=newcolor, line width=1.5pt, dashed]
+    (pause) to[bend right=35]
+    node[below,font=\scriptsize\bfseries,color=newcolor]{\textit{song\_ok} (NOVO)}
+    (idle);
+
+% Self-loops
+\draw (idle)      edge[loop left]  node[font=\scriptsize]{} (idle);
+\draw (select)    edge[loop above] node[font=\scriptsize]{} (select);
+\draw (pause)     edge[loop right] node[font=\scriptsize]{} (pause);
+\draw (countdown) edge[loop above] node[font=\scriptsize]{} (countdown);
+\draw (win)       edge[loop left]  node[font=\scriptsize]{} (win);
+\draw (lose)      edge[loop below] node[font=\scriptsize]{} (lose);
+
+\end{tikzpicture}
+\caption{FSM do jogo — transição nova destacada em verde tracejado}
+\label{fig:fsm}
+\end{figure}
+
+\subsubsection{Impacto na experiência do usuário}
+
+Antes da mudança, abandonar uma música pausada exigia pressionar o botão de
+reset físico da placa. Agora, pressionar o botão 0 (\texttt{song\_ok}) em
+\texttt{pause} retorna ao \texttt{idle}, de onde o fluxo segue normalmente:
+\texttt{idle} $\to$ \texttt{select} $\to$ \texttt{countdown} $\to$
+\texttt{play}. O placar é zerado automaticamente porque os estados
+\texttt{idle} e \texttt{select} mantêm \vsig{limpaR} = 1.
+
+% --------------------------------------------------------------------------
+\subsection{Saídas da UC por estado}
+
+\begin{table}[h!]
+\centering
+\caption{Tabela de saídas da UC por estado}
+\label{tab:saidas-uc}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Estado}    & \vsig{limpaR} & \vsig{zera\_timer} & \vsig{conta\_timer} & \vsig{game\_active} & \vsig{registraR} \\
+\midrule
+\texttt{idle}      & 1 & 1 & 0 & 0 & 0 \\
+\texttt{select}    & 1 & 1 & 0 & 0 & 0 \\
+\texttt{countdown} & 0 & 0 & 1 & 0 & 0 \\
+\texttt{play}      & 0 & 0 & 1 & 1 & \textit{jogada} \\
+\texttt{pause}     & 0 & 0 & 0 & 0 & 0 \\
+\texttt{end\_win}  & 0 & 1 & 0 & 0 & 0 \\
+\texttt{end\_lose} & 0 & 1 & 0 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==========================================================================
+\section{Módulo \texttt{packet\_sender.v} — Telemetria de Posição via UART}
+% ==========================================================================
+
+O \vfile{packet\_sender.v} monta e envia um pacote de bytes pela UART a cada
+\vsig{frame\_tick} ($\approx$60 pacotes/segundo). A versão atual adiciona o
+frame counter ao pacote, expandindo-o de 20 para 22 bytes.
+
+% --------------------------------------------------------------------------
+\subsection{Nova porta de entrada}
+
+\begin{lstlisting}[caption={Declaração de porta adicionada ao packet\_sender}]
+// Versao base — sem frame_counter
+// Versao atual
+input wire [13:0] frame_counter,    // progresso do chart
+\end{lstlisting}
+
+% --------------------------------------------------------------------------
+\subsection{Formato do pacote UART}
+
+A Tabela~\ref{tab:pacote} detalha o formato completo dos dois pacotes.
+
+\begin{table}[h!]
+\centering
+\caption{Formato do pacote UART — comparação entre versões}
+\label{tab:pacote}
+\small
+\begin{tabular}{cllcc}
+\toprule
+\textbf{Byte} & \textbf{Campo} & \textbf{Valor / Sinal} & \textbf{Base} & \textbf{Atual} \\
+\midrule
+\texttt{[0]}  & Marcador início & \texttt{0x55}                     & \checkmark & \checkmark \\
+\texttt{[1]}  & Estado do jogo  & \texttt{\{4'b0, game\_state\}}    & \checkmark & \checkmark \\
+\texttt{[2]}  & Countdown       & \texttt{countdown\_sec}            & \checkmark & \checkmark \\
+\texttt{[3]}  & T0 nota 0       & \texttt{t0n0} (age; 0xFF=vazio)   & \checkmark & \checkmark \\
+\texttt{[4]}  & T0 nota 1       & \texttt{t0n1}                     & \checkmark & \checkmark \\
+\texttt{[5]}  & T0 nota 2       & \texttt{t0n2}                     & \checkmark & \checkmark \\
+\texttt{[6]}  & T1 nota 0       & \texttt{t1n0}                     & \checkmark & \checkmark \\
+\texttt{[7]}  & T1 nota 1       & \texttt{t1n1}                     & \checkmark & \checkmark \\
+\texttt{[8]}  & T1 nota 2       & \texttt{t1n2}                     & \checkmark & \checkmark \\
+\texttt{[9]}  & T2 nota 0       & \texttt{t2n0}                     & \checkmark & \checkmark \\
+\texttt{[10]} & T2 nota 1       & \texttt{t2n1}                     & \checkmark & \checkmark \\
+\texttt{[11]} & T2 nota 2       & \texttt{t2n2}                     & \checkmark & \checkmark \\
+\texttt{[12]} & T3 nota 0       & \texttt{t3n0}                     & \checkmark & \checkmark \\
+\texttt{[13]} & T3 nota 1       & \texttt{t3n1}                     & \checkmark & \checkmark \\
+\texttt{[14]} & T3 nota 2       & \texttt{t3n2}                     & \checkmark & \checkmark \\
+\texttt{[15]} & Score alto      & \texttt{score[15:8]}              & \checkmark & \checkmark \\
+\texttt{[16]} & Score baixo     & \texttt{score[7:0]}               & \checkmark & \checkmark \\
+\texttt{[17]} & Misses          & \texttt{misses}                   & \checkmark & \checkmark \\
+\texttt{[18]} & Combo           & \texttt{combo}                    & \checkmark & \checkmark \\
+\texttt{[19]} & Frame alto      & \texttt{\{2'b00, frame\_counter[13:8]\}} & \texttt{0xAA}$^*$ & \checkmark \\
+\texttt{[20]} & Frame baixo     & \texttt{frame\_counter[7:0]}      & ---        & \checkmark \\
+\texttt{[21]} & Marcador fim    & \texttt{0xAA}                     & ---        & \checkmark \\
+\midrule
+\multicolumn{3}{l}{\textbf{Total}} & \textbf{20\,B} & \textbf{22\,B} \\
+\bottomrule
+\multicolumn{5}{l}{$^*$ Na versão base, o marcador \texttt{0xAA} ocupava o byte \texttt{[19]}.}
+\end{tabular}
+\end{table}
+
+% --------------------------------------------------------------------------
+\subsection{Alterações no buffer e na condição de término}
+
+\begin{lstlisting}[caption={Buffer do pacote}]
+// Versao base
+reg [7:0] pkt [0:19];   // 20 bytes
+
+// Versao atual
+reg [7:0] pkt [0:21];   // 22 bytes
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Preenchimento do pacote no estado WAIT}]
+// Versao base
+pkt[19] <= 8'hAA;
+
+// Versao atual
+pkt[19] <= {2'b00, frame_counter[13:8]};
+pkt[20] <= frame_counter[7:0];
+pkt[21] <= 8'hAA;
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Condição de último byte no estado SEND}]
+// Versao base
+if (byte_idx == 19) begin
+    state <= DONE;
+end
+
+// Versao atual
+if (byte_idx == 21) begin
+    state <= DONE;
+end
+\end{lstlisting}
+
+% --------------------------------------------------------------------------
+\subsection{Latência do pacote}
+
+Com 22 bytes a 115\,200 bps (10 bits por byte em modo 8N1):
+
+\begin{equation}
+    t_{\text{pacote}} = \frac{22 \times 10}{115200} \approx 1{,}91\,\text{ms}
+    \qquad \Bigl(\text{período de quadro} = \frac{1}{60} \approx 16{,}67\,\text{ms}\Bigr)
+\end{equation}
+
+O tempo de transmissão representa apenas 11,4\% do período de quadro,
+não havendo risco de o \texttt{packet\_sender} não terminar antes do
+próximo \vsig{frame\_tick}.
+
+% --------------------------------------------------------------------------
+\subsection{Decodificação do frame counter no host}
+
+O Python pode reconstruir a posição do chart a partir dos dois bytes
+transmitidos com a seguinte operação:
+
+\begin{equation}
+    \text{frame} = (\texttt{pkt[19]} \,\&\, \texttt{0x3F}) \ll 8 \;\mid\; \texttt{pkt[20]}
+\end{equation}
+
+Isso permite sincronizar o início da reprodução de áudio com o frame exato
+em que o chart se encontra, eliminando desalinhamentos acumulados por
+variações de clock entre o PC e a FPGA.
+
+% ==========================================================================
+\section{Módulo de Topo \texttt{proyecto.v} — Interligação}
+% ==========================================================================
+
+O módulo de topo conecta \texttt{fluxo\_dados}, \texttt{unidade\_controle} e
+\texttt{packet\_sender}. As alterações aqui são puramente de cabeamento,
+decorrentes das novas portas adicionadas nos módulos internos.
+
+% --------------------------------------------------------------------------
+\subsection{Novo fio de interligação}
+
+\begin{lstlisting}[caption={Declaração do fio s\_frame\_counter}]
+// Versao base — nao existe
+// Versao atual
+wire [13:0] s_frame_counter;
+\end{lstlisting}
+
+% --------------------------------------------------------------------------
+\subsection{Atualização nas instâncias}
+
+\begin{lstlisting}[caption={Instância de fluxo\_dados — nova conexão}]
+fluxo_dados u_fd (
+    ...
+    .frame_tick_out    (s_frame_tick),
+    .frame_counter_out (s_frame_counter)   // NOVO
+);
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Instância de packet\_sender — nova conexão}]
+packet_sender u_ps (
+    ...
+    .combo         (s_combo),
+    .frame_counter (s_frame_counter),      // NOVO
+    .uart_tx_out   (uart_tx_out)
+);
+\end{lstlisting}
+
+% ==========================================================================
+\section{Arquivo de Constraints \texttt{beat\_by\_bit.sdc}}
+% ==========================================================================
+
+O único ponto alterado no arquivo de timing constraints é a referência ao
+pino de clock:
+
+\begin{lstlisting}[language={},caption={Constraint de clock}]
+# Versao base
+create_clock -name clk -period 20.000 [get_ports {CLOCK_50}]
+
+# Versao atual
+create_clock -name clk -period 20.000 [get_ports {clock}]
+\end{lstlisting}
+
+A mudança reflete a renomeação interna do pino no módulo wrapper
+\texttt{beat\_by\_bit\_de0\_cv.v}, que mapeia o sinal \texttt{CLOCK\_50}
+da placa para o nome genérico \texttt{clock}. O período de 20\,ns
+corresponde ao clock de 50\,MHz e permanece inalterado.
+
+% ==========================================================================
+\section{Módulos Sem Alteração}
+% ==========================================================================
+
+Os módulos listados abaixo permaneceram funcionalmente idênticos entre as
+duas versões. Nenhuma porta, parâmetro ou lógica interna foi modificada.
+
+\begin{table}[h!]
+\centering
+\caption{Módulos inalterados}
+\begin{tabular}{ll}
+\toprule
+\textbf{Arquivo} & \textbf{Função} \\
+\midrule
+\texttt{uart\_tx.v}          & Transmissor UART 8N1 paramétrico \\
+\texttt{note\_track.v}       & Gerência de notas por trilha (até 3 simultâneas) \\
+\texttt{edge\_detector.v}    & Detector de borda de subida/descida \\
+\texttt{debounce\_pulse.v}   & Debounce com saída em pulso \\
+\texttt{hexa7seg.v}          & Decodificador para display 7 segmentos \\
+\texttt{lfsr8.v}             & LFSR de 8 bits \\
+\texttt{registrador\_4.v}    & Registrador de 4 bits com enable e clear \\
+\texttt{contador\_m.v}       & Contador paramétrico M com saída de fim \\
+\texttt{beat\_by\_bit\_de0\_cv.v} & Wrapper de pinos da placa DE0-CV \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==========================================================================
+\section{Tabela Consolidada de Mudanças}
+% ==========================================================================
+
+\begin{longtable}{p{3.5cm} p{5cm} p{5cm}}
+\caption{Resumo consolidado de todas as alterações} \label{tab:consolidado} \\
+\toprule
+\textbf{Arquivo} & \textbf{Versão base} & \textbf{Versão atual} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Arquivo} & \textbf{Versão base} & \textbf{Versão atual} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{fluxo\_dados.v} &
+    \texttt{ROM\_DEPTH = 4428} &
+    \texttt{ROM\_DEPTH = 9861} \\[4pt]
+
+\texttt{fluxo\_dados.v} &
+    \texttt{reg [3:0] chart\_rom} &
+    \texttt{reg [7:0] chart\_rom} \\[4pt]
+
+\texttt{fluxo\_dados.v} &
+    \texttt{reg [12:0] frame\_counter} &
+    \texttt{reg [13:0] frame\_counter} \\[4pt]
+
+\texttt{fluxo\_dados.v} &
+    Sem porta \texttt{frame\_counter\_out} &
+    \texttt{output wire [13:0] frame\_counter\_out} \\[4pt]
+
+\texttt{fluxo\_dados.v} &
+    \texttt{debounce btn0:} \newline \texttt{.reset(reset | limpaR)} &
+    \texttt{debounce btn0:} \newline \texttt{.reset(reset)} \\[4pt]
+
+\texttt{unidade\_controle.v} &
+    \texttt{pause}: \newline $\text{start} \to \text{play}$ &
+    \texttt{pause}: \newline $\text{song\_ok} \to \text{idle}$, $\text{start} \to \text{play}$ \\[4pt]
+
+\texttt{packet\_sender.v} &
+    Sem porta \texttt{frame\_counter} &
+    \texttt{input wire [13:0] frame\_counter} \\[4pt]
+
+\texttt{packet\_sender.v} &
+    \texttt{pkt[0:19]} (20\,B) &
+    \texttt{pkt[0:21]} (22\,B) \\[4pt]
+
+\texttt{packet\_sender.v} &
+    \texttt{pkt[19] = 0xAA} &
+    \texttt{pkt[19..20] = frame\_counter} \newline \texttt{pkt[21] = 0xAA} \\[4pt]
+
+\texttt{packet\_sender.v} &
+    \texttt{byte\_idx == 19} &
+    \texttt{byte\_idx == 21} \\[4pt]
+
+\texttt{proyecto.v} &
+    Sem \texttt{s\_frame\_counter} &
+    \texttt{wire [13:0] s\_frame\_counter} \\[4pt]
+
+\texttt{beat\_by\_bit.sdc} &
+    \texttt{get\_ports \{CLOCK\_50\}} &
+    \texttt{get\_ports \{clock\}} \\
+
+\end{longtable}
+
+% ==========================================================================
+\section{Impacto nas Capacidades do Sistema}
+% ==========================================================================
+
+\begin{table}[h!]
+\centering
+\caption{Comparativo de capacidades}
+\label{tab:capacidades}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Capacidade} & \textbf{Versão base} & \textbf{Versão atual} \\
+\midrule
+Duração máxima do chart      & $\approx$73\,s    & $\approx$164\,s \\
+Bits do frame counter        & 13\,bits          & 14\,bits \\
+Largura da ROM               & 4\,bits/frame     & 8\,bits/frame \\
+Tamanho do pacote UART       & 20\,bytes         & 22\,bytes \\
+Tempo de tx por pacote       & $\approx$1,74\,ms & $\approx$1,91\,ms \\
+Telemetria de posição        & Não               & Sim \\
+Saída do PAUSE sem reset     & Não               & Sim (via botão 0) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{1em}
+
+\begin{destaque}
+\textbf{Compatibilidade de interface:} a interface de I/O externa do sistema
+(pinos físicos da DE0-CV, protocolo UART de nível físico) permanece idêntica.
+As mudanças são internas ao projeto RTL e ao protocolo de dados do pacote.
+O software Python precisa ser atualizado para ler 22 bytes por pacote (em vez
+de 20) e para decodificar os bytes \texttt{[19]} e \texttt{[20]} como
+\texttt{frame\_counter}.
+\end{destaque}
+
+\end{document}

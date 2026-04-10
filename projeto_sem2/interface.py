@@ -560,7 +560,6 @@ class Renderer:
 
         # Efeitos visuais tipados
         self._hit_effects = []  # burst de acerto
-        self._miss_effects = []  # flash vermelho de erro
         self._prev_notes = [[], [], [], []]
         self._prev_score = 0
         self._prev_combo = 0
@@ -581,7 +580,6 @@ class Renderer:
         self._build_btn_surfaces()
         self._build_scanline_surf()
         self._build_bg_grid_surf()
-        self._build_miss_surfs()
         self._build_score_backdrop()
         self._build_ghost_note_surfs()
         self._init_idle_anim()
@@ -694,15 +692,6 @@ class Renderer:
             pygame.draw.line(
                 self.bg_grid_surf, (30, 30, 65, 255), (0, y), (SCREEN_W, y), 1
             )
-
-    def _build_miss_surfs(self):
-        """Pre-renderiza superficies vermelhas para flash de erro por trilha."""
-        # Superficie sem SRCALPHA para set_alpha() funcionar corretamente
-        self.miss_lane_surfs = []
-        for _ in range(4):
-            s = pygame.Surface((TRACK_W, SCREEN_H))
-            s.fill((255, 30, 30))
-            self.miss_lane_surfs.append(s)
 
     def _build_score_backdrop(self):
         """Pre-renderiza painel escuro atras do HUD de score."""
@@ -854,8 +843,7 @@ class Renderer:
                     # Nota sumiu perto da hit zone E score/combo subiu → acerto
                     self._spawn_hit_effect(i, TRACK_X[i], HIT_Y)
                 elif y > HIT_Y + 60:
-                    # Nota sumiu abaixo da hit zone → erro
-                    self._spawn_miss_effect(i)
+                    pass  # erro: feedback apenas no HUD (contador + combo)
 
     def _process_sim(self, events):
         """Atualiza o estado a partir da simulacao Python (modo --sim)."""
@@ -927,19 +915,6 @@ class Renderer:
             }
         )
 
-    def _spawn_miss_effect(self, lane):
-        """Cria flash vermelho de erro na trilha + vinheta nas bordas."""
-        self._miss_effects.append(
-            {
-                "lane": lane,
-                "x": TRACK_X[lane],
-                "age": 0,
-                "lane_alpha": 200,
-                "vignette_alpha": 140,
-                "active": True,
-            }
-        )
-
     # ── Atualizacao de efeitos ────────────────────────────────────────────────
 
     def _advance_effects(self):
@@ -961,17 +936,7 @@ class Renderer:
             if eff["age"] >= 45:
                 eff["active"] = False
 
-        for eff in self._miss_effects:
-            if not eff["active"]:
-                continue
-            eff["age"] += 1
-            eff["lane_alpha"] = max(0, eff["lane_alpha"] - 10)
-            eff["vignette_alpha"] = max(0, eff["vignette_alpha"] - 7)
-            if eff["age"] >= 25:
-                eff["active"] = False
-
         self._hit_effects = [e for e in self._hit_effects if e["active"]]
-        self._miss_effects = [e for e in self._miss_effects if e["active"]]
 
     # ── Componentes de desenho ────────────────────────────────────────────────
 
@@ -997,15 +962,6 @@ class Renderer:
                 (x + TRACK_W // 2, SCREEN_H),
                 1,
             )
-
-    def _draw_miss_lane_flashes(self):
-        """Desenha flash vermelho nas trilhas com erros ativos."""
-        for eff in self._miss_effects:
-            if not eff["active"] or eff["lane_alpha"] <= 0:
-                continue
-            surf = self.miss_lane_surfs[eff["lane"]]
-            surf.set_alpha(eff["lane_alpha"])
-            self.screen.blit(surf, (eff["x"] - TRACK_W // 2, 0))
 
     def _draw_hit_zone(self, active_tracks=None):
         """Desenha a linha da hit zone (pulsante) e os indicadores de botao."""
@@ -1076,24 +1032,6 @@ class Renderer:
                     drawn = True
 
         if drawn:
-            self.screen.blit(self.scratch, (0, 0))
-
-    def _draw_miss_vignettes(self):
-        """Desenha vinheta vermelha nas bordas para erros ativos."""
-        for eff in self._miss_effects:
-            if not eff["active"] or eff["vignette_alpha"] <= 0:
-                continue
-            a = eff["vignette_alpha"]
-            self.scratch.fill((0, 0, 0, 0))
-            c = (200, 0, 0, a)
-            pygame.draw.rect(self.scratch, c, (0, 0, _px(60), SCREEN_H))
-            pygame.draw.rect(
-                self.scratch, c, (SCREEN_W - _px(60), 0, _px(60), SCREEN_H)
-            )
-            pygame.draw.rect(self.scratch, c, (0, 0, SCREEN_W, _py(40)))
-            pygame.draw.rect(
-                self.scratch, c, (0, SCREEN_H - _py(60), SCREEN_W, _py(60))
-            )
             self.screen.blit(self.scratch, (0, 0))
 
     def _draw_hud(self, score, misses, combo):
@@ -1347,16 +1285,14 @@ class Renderer:
 
     def _draw_play(self, notes, score, misses, combo):
         self.screen.fill(BG_COLOR)
-        self._draw_bg_grid()  # 1. grid horizontal sutil
-        self._draw_tracks()  # 2. trilhas + bordas verticais
-        self._draw_miss_lane_flashes()  # 3. flash vermelho de erro (sob as notas)
-        self._draw_notes(notes)  # 4. notas com glow
-        self._draw_hit_zone()  # 5. linha pulsante + botoes (sem letras)
-        self._advance_effects()  # 6. avanca estado dos efeitos
-        self._draw_hit_effects()  # 7. burst: aneis + particulas + flash
-        self._draw_hud(score, misses, combo)  # 8. painel HUD
-        self._draw_miss_vignettes()  # 9. vinheta vermelha nas bordas
-        self.screen.blit(self.scanline_surf, (0, 0))  # 10. scanlines CRT
+        self._draw_bg_grid()       # 1. grid horizontal sutil
+        self._draw_tracks()        # 2. trilhas + bordas verticais
+        self._draw_notes(notes)    # 3. notas com glow
+        self._draw_hit_zone()      # 4. linha pulsante + botoes
+        self._advance_effects()    # 5. avanca estado dos efeitos
+        self._draw_hit_effects()   # 6. burst de acerto: aneis + particulas + flash
+        self._draw_hud(score, misses, combo)  # 7. painel HUD
+        self.screen.blit(self.scanline_surf, (0, 0))  # 8. scanlines CRT
 
     def _draw_pause(self):
         self.screen.fill(BG_COLOR)

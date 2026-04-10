@@ -1,0 +1,74 @@
+\relax 
+\providecommand\zref@newlabel[2]{}
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\catcode `"\active 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\babel@aux{brazil}{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Visão Geral do Projeto}{2}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Estrutura modular}{2}{subsection.1.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Hierarquia de módulos do projeto}}{2}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:hierarquia}{{1}{2}{Hierarquia de módulos do projeto}{table.caption.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Módulo \texttt  {fluxo\_dados.v} — Expansão da ROM e Telemetria}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Expansão da ROM de chart}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.1.1}Profundidade da ROM}{2}{subsubsection.2.1.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}{\ignorespaces Parâmetro ROM\_DEPTH — antes e depois}}{2}{lstlisting.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.1.2}Largura das entradas}{3}{subsubsection.2.1.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}{\ignorespaces Tipo do array da ROM}}{3}{lstlisting.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Expansão do frame counter}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}{\ignorespaces Declaração do frame\_counter}}{3}{lstlisting.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}{\ignorespaces Reset e incremento do frame\_counter}}{3}{lstlisting.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Nova porta de saída: \texttt  {frame\_counter\_out}}{4}{subsection.2.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces Nova porta de saída em fluxo\_dados}}{4}{lstlisting.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Correção no debounce do botão 0}{4}{subsection.2.4}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}{\ignorespaces Reset do debounce — botão 0}}{4}{lstlisting.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.1}Motivação}{4}{subsubsection.2.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Módulo \texttt  {unidade\_controle.v} — Nova Transição no PAUSE}{5}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Descrição dos estados}{5}{subsection.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Estados da FSM}}{5}{table.caption.2}\protected@file@percent }
+\newlabel{tab:estados}{{2}{5}{Estados da FSM}{table.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Nova transição: \texttt  {PAUSE} $\to $ \texttt  {IDLE}}{5}{subsection.3.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}{\ignorespaces Lógica de próximo estado — estado pause}}{5}{lstlisting.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Diagrama de estados atualizado}{5}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}Impacto na experiência do usuário}{5}{subsubsection.3.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Saídas da UC por estado}{5}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Módulo \texttt  {packet\_sender.v} — Telemetria de Posição via UART}{5}{section.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces FSM do jogo — transição nova destacada em verde tracejado}}{6}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:fsm}{{1}{6}{FSM do jogo — transição nova destacada em verde tracejado}{figure.caption.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Tabela de saídas da UC por estado}}{6}{table.caption.4}\protected@file@percent }
+\newlabel{tab:saidas-uc}{{3}{6}{Tabela de saídas da UC por estado}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Nova porta de entrada}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}{\ignorespaces Declaração de porta adicionada ao packet\_sender}}{6}{lstlisting.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Formato do pacote UART}{6}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Alterações no buffer e na condição de término}{6}{subsection.4.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {9}{\ignorespaces Buffer do pacote}}{6}{lstlisting.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Formato do pacote UART — comparação entre versões}}{7}{table.caption.5}\protected@file@percent }
+\newlabel{tab:pacote}{{4}{7}{Formato do pacote UART — comparação entre versões}{table.caption.5}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}{\ignorespaces Preenchimento do pacote no estado WAIT}}{7}{lstlisting.10}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {11}{\ignorespaces Condição de último byte no estado SEND}}{7}{lstlisting.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Latência do pacote}{8}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Decodificação do frame counter no host}{8}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Módulo de Topo \texttt  {proyecto.v} — Interligação}{8}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Novo fio de interligação}{8}{subsection.5.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}{\ignorespaces Declaração do fio s\_frame\_counter}}{8}{lstlisting.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Atualização nas instâncias}{8}{subsection.5.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {13}{\ignorespaces Instância de fluxo\_dados — nova conexão}}{8}{lstlisting.13}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {14}{\ignorespaces Instância de packet\_sender — nova conexão}}{8}{lstlisting.14}\protected@file@percent }
+\gdef \LT@i {\LT@entry 
+    {1}{111.58464pt}\LT@entry 
+    {1}{154.26378pt}\LT@entry 
+    {1}{154.26378pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Arquivo de Constraints \texttt  {beat\_by\_bit.sdc}}{9}{section.6}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {15}{\ignorespaces Constraint de clock}}{9}{lstlisting.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Módulos Sem Alteração}{9}{section.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Módulos inalterados}}{9}{table.caption.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Tabela Consolidada de Mudanças}{9}{section.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Resumo consolidado de todas as alterações}}{9}{table.6}\protected@file@percent }
+\newlabel{tab:consolidado}{{6}{9}{Resumo consolidado de todas as alterações}{table.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Impacto nas Capacidades do Sistema}{10}{section.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Comparativo de capacidades}}{10}{table.caption.7}\protected@file@percent }
+\newlabel{tab:capacidades}{{7}{10}{Comparativo de capacidades}{table.caption.7}{}}
+\gdef \@abspage@last{11}

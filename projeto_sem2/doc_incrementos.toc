@@ -1,0 +1,30 @@
+\babel@toc {brazil}{}\relax 
+\contentsline {section}{\numberline {1}Visão Geral do Projeto}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Estrutura modular}{2}{subsection.1.1}%
+\contentsline {section}{\numberline {2}Módulo \texttt {fluxo\_dados.v} — Expansão da ROM e Telemetria}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Expansão da ROM de chart}{2}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}Profundidade da ROM}{2}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}Largura das entradas}{3}{subsubsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.2}Expansão do frame counter}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Nova porta de saída: \texttt {frame\_counter\_out}}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Correção no debounce do botão 0}{4}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}Motivação}{4}{subsubsection.2.4.1}%
+\contentsline {section}{\numberline {3}Módulo \texttt {unidade\_controle.v} — Nova Transição no PAUSE}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Descrição dos estados}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Nova transição: \texttt {PAUSE} $\to $ \texttt {IDLE}}{5}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Diagrama de estados atualizado}{5}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Impacto na experiência do usuário}{5}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Saídas da UC por estado}{5}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Módulo \texttt {packet\_sender.v} — Telemetria de Posição via UART}{5}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Nova porta de entrada}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Formato do pacote UART}{6}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Alterações no buffer e na condição de término}{6}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Latência do pacote}{8}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Decodificação do frame counter no host}{8}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Módulo de Topo \texttt {proyecto.v} — Interligação}{8}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Novo fio de interligação}{8}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Atualização nas instâncias}{8}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Arquivo de Constraints \texttt {beat\_by\_bit.sdc}}{9}{section.6}%
+\contentsline {section}{\numberline {7}Módulos Sem Alteração}{9}{section.7}%
+\contentsline {section}{\numberline {8}Tabela Consolidada de Mudanças}{9}{section.8}%
+\contentsline {section}{\numberline {9}Impacto nas Capacidades do Sistema}{10}{section.9}%
