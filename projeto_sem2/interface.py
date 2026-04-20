@@ -148,7 +148,7 @@ SONGS = [
         "title": "Pokemon",
         "subtitle": "Opening Theme",
         "author": "",
-        "midi": "musica4_pokemon/pokemon.mid",
+        "midi": "musica4_pokemon/opening_pokemon.mid",
         "audio": "musica4_pokemon/Pokemon.wav",
         "duration": 61.98,
         "hex": "pokemon.hex",
@@ -461,6 +461,9 @@ class SimulationEngine:
                 self._start_countdown()
             elif btn[2]:
                 self._selected_song = 2
+                self._start_countdown()
+            elif btn[3]:
+                self._selected_song = 3
                 self._start_countdown()
         elif self.state == STATE_COUNTDOWN:
             self._cd_frame += 1
@@ -1264,9 +1267,9 @@ class Renderer:
 
         # Dica
         if self._sim_mode:
-            hint_text = "[SIM]  D = Hobbit  |  F = Ocarina  |  J = Power Rangers  |  SPACE = Voltar"
+            hint_text = "[SIM]  D = Hobbit  |  F = Ocarina  |  J = Power Rangers  |  K = Pokemon  |  SPACE = Voltar"
         else:
-            hint_text = "Btn0 = Hobbit  |  Btn1 = Ocarina  |  Btn2 = Power Rangers  |  START = Voltar"
+            hint_text = "Btn0 = Hobbit  |  Btn1 = Ocarina  |  Btn2 = Power Rangers  |  Btn3 = Pokemon  |  START = Voltar"
         hint = self.font(26).render(hint_text, True, (55, 90, 150))
         self.screen.blit(
             hint, hint.get_rect(center=(SCREEN_W // 2, BOX_TOP + BOX_H + 28))
@@ -1302,53 +1305,129 @@ class Renderer:
         self._draw_hud(score, misses, combo)  # 7. painel HUD
         self.screen.blit(self.scanline_surf, (0, 0))  # 8. scanlines CRT
 
+    def _draw_star(self, x, y, size, color):
+        pts = []
+        for i in range(10):
+            angle = math.pi * i / 5 - math.pi / 2
+            r = size if i % 2 == 0 else size // 2
+            pts.append((x + int(r * math.cos(angle)), y + int(r * math.sin(angle))))
+        pygame.draw.polygon(self.screen, color, pts)
+
     def _draw_pause(self):
         self.screen.fill(BG_COLOR)
-        self._draw_tracks(alpha=60)
+        self._draw_tracks(alpha=50)
+        self.screen.blit(self.scanline_surf, (0, 0))
+
         overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 140))
+        overlay.fill((0, 0, 0, 155))
         self.screen.blit(overlay, (0, 0))
-        self.screen.blit(self._logo_pause, self._logo_pause.get_rect(center=(SCREEN_W // 2, _py(115))))
-        pause_txt = self.font(90).render("PAUSADO", True, (180, 220, 255))
-        self.screen.blit(
-            pause_txt, pause_txt.get_rect(center=(SCREEN_W // 2, _py(265)))
-        )
+
+        cx = SCREEN_W // 2
+        ticks = pygame.time.get_ticks()
+        pulse = 0.5 + 0.5 * math.sin(ticks * 0.003)
+
+        # Painel central
+        pw, ph = _px(310), _py(430)
+        px_ = (SCREEN_W - pw) // 2
+        py_ = (SCREEN_H - ph) // 2
+        panel = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        panel.fill((6, 12, 35, 210))
+        pygame.draw.rect(panel, (40, 85, 175, 200), (0, 0, pw, ph), 2, border_radius=14)
+        self.screen.blit(panel, (px_, py_))
+
+        # Logo
+        self.screen.blit(self._logo_pause, self._logo_pause.get_rect(center=(cx, py_ + _py(90))))
+
+        # Separador laranja
+        sep_y = py_ + _py(172)
+        pygame.draw.line(self.screen, (255, 110, 0, 200), (px_ + _px(25), sep_y), (px_ + pw - _px(25), sep_y), 2)
+
+        # "PAUSADO" com glow pulsante e sombra
+        glow_col = (int(120 + 60 * pulse), int(190 + 30 * pulse), 255)
+        shadow_s = self.font(85).render("PAUSADO", True, (10, 20, 55))
+        pause_s  = self.font(85).render("PAUSADO", True, glow_col)
+        txt_y = py_ + _py(255)
+        self.screen.blit(shadow_s, shadow_s.get_rect(center=(cx + 3, txt_y + 3)))
+        self.screen.blit(pause_s,  pause_s.get_rect(center=(cx, txt_y)))
+
+        # Separador sutil
+        sep2_y = py_ + _py(305)
+        pygame.draw.line(self.screen, (30, 55, 110), (px_ + _px(40), sep2_y), (px_ + pw - _px(40), sep2_y), 1)
+
+        # Hints
         if self._sim_mode:
             line1, line2 = "SPACE: continuar", "ESC: menu inicial"
         else:
             line1, line2 = "START: continuar", "Botao 0: menu inicial"
         c = (120, 170, 220)
-        s1 = self.font(40).render(line1, True, c)
-        s2 = self.font(40).render(line2, True, c)
-        self.screen.blit(s1, s1.get_rect(center=(SCREEN_W // 2, _py(370))))
-        self.screen.blit(s2, s2.get_rect(center=(SCREEN_W // 2, _py(420))))
+        for i, line in enumerate([line1, line2]):
+            s = self.font(36).render(line, True, c)
+            self.screen.blit(s, s.get_rect(center=(cx, py_ + _py(340) + i * _py(48))))
+
         self._draw_hud(self.fpga_score, self.fpga_misses, self.fpga_combo)
 
     def _draw_endscreen(self, win, score, misses):
-        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        overlay.fill((0, 25, 65, 180) if win else (40, 0, 0, 180))
-        self.screen.blit(overlay, (0, 0))
+        # Fundo vivo: grid + trilhas fantasmas
+        self._draw_bg_grid()
+        self._draw_tracks(alpha=18)
 
+        cx = SCREEN_W // 2
+        ticks = pygame.time.get_ticks()
+        pulse = 0.5 + 0.5 * math.sin(ticks * 0.004)
+
+        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        overlay.fill((0, 20, 60, 155) if win else (38, 0, 0, 160))
+        self.screen.blit(overlay, (0, 0))
+        self.screen.blit(self.scanline_surf, (0, 0))
+
+        # Logo
+        self.screen.blit(self._logo_pause, self._logo_pause.get_rect(center=(cx, _py(88))))
+
+        # Separador colorido
+        sep_col = (255, 110, 0) if win else (255, 60, 60)
+        pygame.draw.line(self.screen, sep_col, (_px(180), _py(168)), (SCREEN_W - _px(180), _py(168)), 2)
+
+        # Mensagem principal com sombra + glow pulsante
         color = (0, 190, 255) if win else (255, 60, 60)
         message = "VITORIA!" if win else "GAME OVER"
-        msg_txt = self.font(100).render(message, True, color)
-        self.screen.blit(msg_txt, msg_txt.get_rect(center=(SCREEN_W // 2, _py(200))))
+        shadow_s = self.font(110).render(message, True, (5, 15, 45) if win else (50, 0, 0))
+        msg_txt  = self.font(110).render(message, True, color)
+        glow_s   = self.font(110).render(message, True, color)
+        glow_surf = pygame.Surface(glow_s.get_size(), pygame.SRCALPHA)
+        glow_surf.blit(glow_s, (0, 0))
+        glow_surf.set_alpha(int(60 + 50 * pulse))
+        msg_y = _py(255)
+        self.screen.blit(shadow_s, shadow_s.get_rect(center=(cx + 4, msg_y + 4)))
+        self.screen.blit(glow_surf, glow_surf.get_rect(center=(cx, msg_y)))
+        self.screen.blit(msg_txt,   msg_txt.get_rect(center=(cx, msg_y)))
 
-        score_txt = self.font(60).render(f"Score: {score:06d}", True, (255, 200, 100))
-        self.screen.blit(
-            score_txt, score_txt.get_rect(center=(SCREEN_W // 2, _py(320)))
-        )
+        # Painel de score
+        pw, ph = _px(290), _py(130)
+        px_ = (SCREEN_W - pw) // 2
+        py_ = _py(318)
+        panel = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        panel.fill((6, 12, 35, 210))
+        border_col = (0, 140, 255, 200) if win else (200, 50, 50, 200)
+        pygame.draw.rect(panel, border_col, (0, 0, pw, ph), 2, border_radius=10)
+        self.screen.blit(panel, (px_, py_))
 
-        miss_txt = self.font(40).render(f"Erros: {misses}", True, (180, 205, 235))
-        self.screen.blit(miss_txt, miss_txt.get_rect(center=(SCREEN_W // 2, _py(390))))
+        score_txt = self.font(58).render(f"Score: {score:06d}", True, (255, 200, 100))
+        self.screen.blit(score_txt, score_txt.get_rect(center=(cx, py_ + _py(42))))
+        miss_txt = self.font(34).render(f"Erros: {misses} / {MAX_MISSES}", True, (170, 200, 235))
+        self.screen.blit(miss_txt, miss_txt.get_rect(center=(cx, py_ + _py(88))))
 
-        if pygame.time.get_ticks() % 1000 < 650:
-            restart = self.font(44).render(
-                "Aperte START para jogar novamente", True, (175, 210, 245)
-            )
-            self.screen.blit(
-                restart, restart.get_rect(center=(SCREEN_W // 2, _py(490)))
-            )
+        # Estrelas (vitoria)
+        if win:
+            stars = max(0, 3 - misses // 3)
+            for i in range(3):
+                col = (255, int(180 + 20 * pulse), 0) if i < stars else (35, 45, 75)
+                self._draw_star(cx + (i - 1) * _px(55), _py(478), _ps(22), col)
+
+        # Restart pulsante
+        if ticks % 1000 < 650:
+            restart_y = _py(530) if win else _py(490)
+            restart = self.font(40).render("Aperte START para jogar novamente", True, (175, 210, 245))
+            self.screen.blit(restart, restart.get_rect(center=(cx, restart_y)))
 
     # ── Loop principal ────────────────────────────────────────────────────────
 
