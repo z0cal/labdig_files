@@ -99,7 +99,7 @@ TRACK_BG = (12, 20, 48)
 LINE_COLOR = (30, 55, 110)
 HIT_LINE_COL = (55, 100, 180)
 
-MAX_MISSES = 10
+MAX_MISSES = 999
 
 # Estados da FPGA (devem ser iguais aos estados da UC em Verilog)
 STATE_IDLE = 0
@@ -117,7 +117,7 @@ SONGS = [
     {
         "title": "Concerning Hobbits",
         "subtitle": "The Lord of the Rings",
-        "author": "Howard Shore",
+        "author": "",
         "midi": "musica1_condado/condado_curta.mid",
         "audio": "musica1_condado/Condado_curta.wav",
         "duration": 63.86,
@@ -136,7 +136,7 @@ SONGS = [
     },
     {
         "title": "Power Rangers",
-        "subtitle": "Insane Mode",
+        "subtitle": "Super Patrulha Delta",
         "author": "",
         "midi": "musica3_insanemode/power_rangers.mid",
         "audio": "musica3_insanemode/Power_Rangers.wav",
@@ -536,12 +536,11 @@ class SimulationEngine:
                     and abs(track[i] - self.HIT_AGE) <= self.HIT_WIN
                 ):
                     track[i] = self.EMPTY
-                    self.score += 100
+                    self.score += 100 + self.combo
                     self.combo += 1
                     hit = True
                     break
             if not hit:
-                self.misses += 1  # tecla errada tambem conta como erro
                 self.combo = 0
 
     def _all_empty(self):
@@ -1080,7 +1079,7 @@ class Renderer:
 
         miss_color = (255, 80, 80) if misses > 5 else (100, 160, 220)
         miss_txt = self.font(28).render(
-            f"ERROS {misses}/{MAX_MISSES}", True, miss_color
+            f"ERROS {misses}", True, miss_color
         )
         self.screen.blit(miss_txt, (_px(20), _py(52)))
 
@@ -1159,7 +1158,7 @@ class Renderer:
         if self._sim_mode:
             hint_text = "[SIM]  D / F / J / K = trilhas   |   SPACE = START"
         else:
-            hint_text = "FPGA: botoes 0-3 = trilhas  |  botao 4 = START"
+            hint_text = ""
         hint = self.font(30).render(hint_text, True, (60, 95, 155))
         self.screen.blit(hint, hint.get_rect(center=(SCREEN_W // 2, _py(540))))
 
@@ -1269,7 +1268,7 @@ class Renderer:
         if self._sim_mode:
             hint_text = "[SIM]  D = Hobbit  |  F = Ocarina  |  J = Power Rangers  |  K = Pokemon  |  SPACE = Voltar"
         else:
-            hint_text = "Btn0 = Hobbit  |  Btn1 = Ocarina  |  Btn2 = Power Rangers  |  Btn3 = Pokemon  |  START = Voltar"
+            hint_text = ""
         hint = self.font(26).render(hint_text, True, (55, 90, 150))
         self.screen.blit(
             hint, hint.get_rect(center=(SCREEN_W // 2, BOX_TOP + BOX_H + 28))
@@ -1358,7 +1357,7 @@ class Renderer:
         if self._sim_mode:
             line1, line2 = "SPACE: continuar", "ESC: menu inicial"
         else:
-            line1, line2 = "START: continuar", "Botao 0: menu inicial"
+            line1, line2 = "START: continuar", "Amarelo: menu inicial"
         c = (120, 170, 220)
         for i, line in enumerate([line1, line2]):
             s = self.font(36).render(line, True, c)
@@ -1413,12 +1412,12 @@ class Renderer:
 
         score_txt = self.font(58).render(f"Score: {score:06d}", True, (255, 200, 100))
         self.screen.blit(score_txt, score_txt.get_rect(center=(cx, py_ + _py(42))))
-        miss_txt = self.font(34).render(f"Erros: {misses} / {MAX_MISSES}", True, (170, 200, 235))
+        miss_txt = self.font(34).render(f"Erros: {misses}", True, (170, 200, 235))
         self.screen.blit(miss_txt, miss_txt.get_rect(center=(cx, py_ + _py(88))))
 
         # Estrelas (vitoria)
         if win:
-            stars = max(0, 3 - misses // 3)
+            stars = 3 if misses == 0 else (2 if misses <= 10 else (1 if misses <= 20 else 0))
             for i in range(3):
                 col = (255, int(180 + 20 * pulse), 0) if i < stars else (35, 45, 75)
                 self._draw_star(cx + (i - 1) * _px(55), _py(478), _ps(22), col)

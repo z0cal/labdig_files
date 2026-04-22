@@ -84,7 +84,7 @@ module fluxo_dados (
     localparam integer BTN_DEBOUNCE_CYCLES = 9_000_000;
     wire [3:0] btn_pulse;
 
-    // btn0, btn1 e btn2 nao usam limpaR no reset: song_ok precisa ser detectado
+    // Todos os botoes usam apenas reset (sem limpaR): song_ok precisa ser detectado
     // no estado SELECT, onde limpaR=1 (UC mantem limpaR alto em idle e select).
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_btn0 (.clock(clock), .reset(reset), .sinal(botoes_trilha[0]), .pulso(btn_pulse[0]));
@@ -93,13 +93,13 @@ module fluxo_dados (
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_btn2 (.clock(clock), .reset(reset), .sinal(botoes_trilha[2]), .pulso(btn_pulse[2]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
-        u_db_btn3 (.clock(clock), .reset(reset | limpaR), .sinal(botoes_trilha[3]), .pulso(btn_pulse[3]));
+        u_db_btn3 (.clock(clock), .reset(reset), .sinal(botoes_trilha[3]), .pulso(btn_pulse[3]));
     debounce_pulse #(.DEBOUNCE_CYCLES(BTN_DEBOUNCE_CYCLES))
         u_db_start (.clock(clock), .reset(reset), .sinal(start_raw), .pulso(start_pulso));
 
     assign jogada_feita  = |btn_pulse;
-    // Qualquer dos 3 botoes de selecao de musica dispara song_ok para a UC
-    assign song_ok_pulso = btn_pulse[0] | btn_pulse[1] | btn_pulse[2];
+    // Qualquer dos 4 botoes de selecao de musica dispara song_ok para a UC
+    assign song_ok_pulso = btn_pulse[0] | btn_pulse[1] | btn_pulse[2] | btn_pulse[3];
 
     // Registra qual musica foi selecionada (0=Hobbits, 1=Ocarina, 2=Power Rangers).
     // Guardado por limpaR=1 (estados idle/select): evita que apertar trilhas
@@ -111,6 +111,7 @@ module fluxo_dados (
             if      (btn_pulse[0])    song_id_reg <= 2'd0;
             else if (btn_pulse[1])    song_id_reg <= 2'd1;
             else if (btn_pulse[2])    song_id_reg <= 2'd2;
+            else if (btn_pulse[3])    song_id_reg <= 2'd3;
         end
     end
 
@@ -172,19 +173,23 @@ module fluxo_dados (
     localparam integer ROM_DEPTH_0 = 4096;   // condado_curta:   3831 frames, padded to 2^12
     localparam integer ROM_DEPTH_1 = 8192;   // ocarina_curta:   4219 frames, padded to 2^13
     localparam integer ROM_DEPTH_2 = 4096;   // power_rangers:   3880 frames, padded to 2^12
+    localparam integer ROM_DEPTH_3 = 4096;   // pokemon:         3718 frames, padded to 2^12
 
     reg [3:0] chart_rom0 [0:ROM_DEPTH_0-1];
     reg [3:0] chart_rom1 [0:ROM_DEPTH_1-1];
     reg [3:0] chart_rom2 [0:ROM_DEPTH_2-1];
+    reg [3:0] chart_rom3 [0:ROM_DEPTH_3-1];
 
     initial $readmemh("condado_curta.hex",  chart_rom0);
     initial $readmemh("ocarina_curta.hex",  chart_rom1);
     initial $readmemh("power_rangers.hex",  chart_rom2);
+    initial $readmemh("pokemon.hex",        chart_rom3);
 
     // Profundidade real de cada chart (para fim_tempo e teto do frame_counter)
     wire [13:0] current_rom_depth;
     assign current_rom_depth = (song_id_reg == 2'd1) ? 14'd4219 :
                                (song_id_reg == 2'd2) ? 14'd3880 :
+                               (song_id_reg == 2'd3) ? 14'd3718 :
                                                        14'd3831;
 
     // ----------------------------------------------------------------
@@ -263,6 +268,7 @@ module fluxo_dados (
         case (song_id_reg)
             2'd1:    chart_spawn_r <= chart_rom1[frame_counter];
             2'd2:    chart_spawn_r <= chart_rom2[frame_counter];
+            2'd3:    chart_spawn_r <= chart_rom3[frame_counter];
             default: chart_spawn_r <= chart_rom0[frame_counter];
         endcase
     end
@@ -276,7 +282,7 @@ module fluxo_dados (
     wire any_bad    = |bad_press;
 
     // ----------------------------------------------------------------
-    // Score (16 bits): +100 por acerto
+    // Score (16 bits): +100 por acerto + 1% do base por nivel de combo
     // ----------------------------------------------------------------
     reg [15:0] score_reg;
 
@@ -286,14 +292,14 @@ module fluxo_dados (
         end else if (limpaR) begin
             score_reg <= 16'd0;
         end else if (any_hit) begin
-            score_reg <= score_reg + 16'd100;
+            score_reg <= score_reg + 16'd100 + {8'd0, combo_reg};
         end
     end
 
     assign score = score_reg;
 
     // ----------------------------------------------------------------
-    // Misses (8 bits): incrementa quando nota escapa OU tecla errada
+    // Misses (8 bits): incrementa apenas quando nota escapa sem ser acertada
     // ----------------------------------------------------------------
     reg [7:0] miss_reg;
 
@@ -302,7 +308,7 @@ module fluxo_dados (
             miss_reg <= 8'd0;
         end else if (limpaR) begin
             miss_reg <= 8'd0;
-        end else if ((any_escape || any_bad) && game_active) begin
+        end else if (any_escape && game_active) begin
             miss_reg <= miss_reg + 8'd1;
         end
     end

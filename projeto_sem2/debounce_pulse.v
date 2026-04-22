@@ -33,9 +33,9 @@ module debounce_pulse #(parameter integer DEBOUNCE_CYCLES = 9_000_000) (
 
     always @(posedge clock or posedge reset) begin
         if (reset) begin
-            sync0          <= 1'b0;
-            sync1          <= 1'b0;
-            prev_sync1     <= 1'b0;
+            sync0          <= 1'b1;  // 1 = estado de repouso com pull-up (sem pulso espurio)
+            sync1          <= 1'b1;
+            prev_sync1     <= 1'b1;
             pulso_reg      <= 1'b0;
             lockout_active <= 1'b0;
             wait_release   <= 1'b0;
